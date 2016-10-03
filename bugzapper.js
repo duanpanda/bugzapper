@@ -2,7 +2,12 @@ var canvas;
 var gl;
 var vertices;
 var index;
+var colors = [];
 var numPoints = 50; // number of points per circle
+var baseColors = [
+    vec3(0.7, 0.9, 0.3),
+    vec3(0.8, 0.2, 0.2)
+];
 
 window.onload = function init()
 {
@@ -17,14 +22,11 @@ window.onload = function init()
 
     // First, initialize the vertices of our 3D gasket
 
-    var disc = new Circle(vec3(0.0, 0.0, 0.0), 0.8);
-    var bacteria = new Circle(disc.points[30], 0.2);
+    var disc = new Circle(vec3(0.0, 0.0, 0.0), 0.8, 0);
+    var bacteria = new Circle(disc.points[20], 0.1, 1);
     vertices = Array.prototype.concat(disc.points, bacteria.points);
-    // console.log(vertices);
-
     index = concatIndex(disc.index, bacteria.index);
-    // console.log(index);
-
+    colors = Array.prototype.concat(disc.color, bacteria.color);
 
     //
     //  Configure WebGL
@@ -40,20 +42,32 @@ window.onload = function init()
 
     // Load the data into the GPU
 
+    // vertex coordinates
+
     var vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
 
-    // Associate out shader variables with our data buffer
-
-    var vPosition = gl.getAttribLocation( program, "vPosition" );
+    var vPosition = gl.getAttribLocation(program, "vPosition");
     gl.vertexAttribPointer(vPosition, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
 
-    // Bind Element Array
+    // vertex color
+
+    var colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+
+    var vColor = gl.getAttribLocation(program, "vColor");
+    gl.vertexAttribPointer(vColor, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vColor);
+
+    // element index
+
     var indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index), gl.STATIC_DRAW);
+
 
     render();
 };
@@ -94,12 +108,17 @@ function genCircleIndex() {
     return iv;
 }
 
-function Circle(center, radius) { // center is a vec3, radius is a float
+// center is a vec3, radius is a float
+function Circle(center, radius, colorIndex) {
     this.x = center[0];
     this.y = center[1];
     this.r = radius;
     this.points = genCirclePoints(center, radius); // points on the peripheral
     this.index = genCircleIndex();
+    this.color = new Array(this.points.length);
+    for (i = 0; i < this.points.length; i++) {
+	this.color[i] = baseColors[colorIndex];
+    }
 }
 
 function concatIndex(a, b) {
