@@ -1,7 +1,7 @@
 var canvas;
 var gl;
-var vertices;
-var index;
+var vertices = [];
+var index = [];
 var colors = [];
 var numPoints = 50; // number of points per circle
 var baseColors = [
@@ -22,11 +22,19 @@ window.onload = function init()
 
     // First, initialize the vertices of our 3D gasket
 
-    var disc = new Circle(vec3(0.0, 0.0, 0.0), 0.8, 0);
-    var bacteria = new Circle(disc.points[20], 0.1, 1);
-    vertices = Array.prototype.concat(disc.points, bacteria.points);
-    index = concatIndex(disc.index, bacteria.index);
-    colors = Array.prototype.concat(disc.color, bacteria.color);
+    var disc = new Circle(vec3(0.0, 0.0, 0.0), // center coordinates
+			  0.8,		       // radius
+			  0,		       // color index for baseColors
+			  0);		       // z
+    var bacteria = new Circle(disc.points[20],
+			      0.1,
+			      1,
+			      -1);
+    // vertices = Array.prototype.concat(disc.points, bacteria.points);
+    // index = concatIndex(disc.index, bacteria.index);
+    // colors = Array.prototype.concat(disc.color, bacteria.color);
+    addObject(disc);
+    addObject(bacteria);
 
     //
     //  Configure WebGL
@@ -83,21 +91,22 @@ function render()
 /**
  * Generate circle points
  */
-function genCirclePoints(center, r) { // center is a vec3
-    pv = [center];
-    d = Math.PI * (360 / numPoints) / 180;
-    for (theta = 0; theta < 2 * Math.PI; theta += d) {
-	x = center[0] + r * Math.cos(theta);
-	y = center[1] + r * Math.sin(theta);
-	z = 0.0;
+// center is a vec3
+function genCirclePoints(center, r, az) {
+    var pv = [center];
+    var d = Math.PI * (360 / numPoints) / 180;
+    for (var theta = 0; theta < 2 * Math.PI; theta += d) {
+	var x = center[0] + r * Math.cos(theta);
+	var y = center[1] + r * Math.sin(theta);
+	var z = az;
 	pv.push(vec3(x, y, z));
     }
     return pv;
 }
 
 function genCircleIndex() {
-    iv = [];
-    for (i = 1; i < numPoints; i++) {
+    var iv = [];
+    for (var i = 1; i < numPoints; i++) {
 	iv.push(0);
 	iv.push(i);
 	iv.push(i+1);
@@ -109,11 +118,11 @@ function genCircleIndex() {
 }
 
 // center is a vec3, radius is a float
-function Circle(center, radius, colorIndex) {
+function Circle(center, radius, colorIndex, az) {
     this.x = center[0];
     this.y = center[1];
     this.r = radius;
-    this.points = genCirclePoints(center, radius); // points on the peripheral
+    this.points = genCirclePoints(center, radius, az); // points on the peripheral
     this.index = genCircleIndex();
     this.color = new Array(this.points.length);
     for (i = 0; i < this.points.length; i++) {
@@ -122,9 +131,16 @@ function Circle(center, radius, colorIndex) {
 }
 
 function concatIndex(a, b) {
-    d = a.length / 3 + 1;
-    for (i = 0; i < b.length; i++) {
+    var d = a.length / 3 + 1;
+    for (var i = 0; i < b.length; i++) {
 	b[i] += d;
     }
     return Array.prototype.concat.apply(a, b);
+}
+
+// This function modifies global variables!
+function addObject(obj) {
+    vertices = vertices.concat(obj.points);
+    index = concatIndex(index, obj.index);
+    colors = colors.concat(obj.color);
 }
