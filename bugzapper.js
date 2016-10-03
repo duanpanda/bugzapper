@@ -3,7 +3,7 @@ var gl;
 var vertices = [];
 var index = [];
 var colors = [];
-var numPoints = 50; // number of points per circle
+var numPoints = 80; // number of points per circle
 var baseColors = [
     vec3(0.7, 0.9, 0.3),
     vec3(0.8, 0.2, 0.2)
@@ -26,15 +26,14 @@ window.onload = function init()
 			  0.8,		       // radius
 			  0,		       // color index for baseColors
 			  0);		       // z
-    var bacteria = new Circle(disc.points[20],
-			      0.1,
-			      1,
-			      -1);
-    // vertices = Array.prototype.concat(disc.points, bacteria.points);
-    // index = concatIndex(disc.index, bacteria.index);
-    // colors = Array.prototype.concat(disc.color, bacteria.color);
     addObject(disc);
-    addObject(bacteria);
+    for (var i = 10; i < 20; i++) {
+	var bacteria = new Circle(disc.points[i],
+				  0.1,
+				  1,
+				  -1);
+	addObject(bacteria);
+    }
 
     //
     //  Configure WebGL
