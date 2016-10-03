@@ -2,8 +2,7 @@ var canvas;
 var gl;
 var vertices;
 var index;
-
-var numPoints = 100;
+var numPoints = 50; // number of points per circle
 
 window.onload = function init()
 {
@@ -18,11 +17,13 @@ window.onload = function init()
 
     // First, initialize the vertices of our 3D gasket
 
-    vertices = genCirclePoints(0.0, 0.0, 0.8);
-    console.log(vertices);
+    var disc = new Circle(vec3(0.0, 0.0, 0.0), 0.8);
+    var bacteria = new Circle(disc.points[30], 0.2);
+    vertices = Array.prototype.concat(disc.points, bacteria.points);
+    // console.log(vertices);
 
-    index = genCircleIndice();
-    console.log(index);
+    index = concatIndex(disc.index, bacteria.index);
+    // console.log(index);
 
 
     //
@@ -68,19 +69,19 @@ function render()
 /**
  * Generate circle points
  */
-function genCirclePoints(x0, y0, r) {
-    pv = [vec3(x0,y0,0)];
+function genCirclePoints(center, r) { // center is a vec3
+    pv = [center];
     d = Math.PI * (360 / numPoints) / 180;
     for (theta = 0; theta < 2 * Math.PI; theta += d) {
-	x = x0 + r * Math.cos(theta);
-	y = y0 + r * Math.sin(theta);
+	x = center[0] + r * Math.cos(theta);
+	y = center[1] + r * Math.sin(theta);
 	z = 0.0;
 	pv.push(vec3(x, y, z));
     }
     return pv;
 }
 
-function genCircleIndice() {
+function genCircleIndex() {
     iv = [];
     for (i = 1; i < numPoints; i++) {
 	iv.push(0);
@@ -91,4 +92,20 @@ function genCircleIndice() {
     iv.push(i);
     iv.push(1);
     return iv;
+}
+
+function Circle(center, radius) { // center is a vec3, radius is a float
+    this.x = center[0];
+    this.y = center[1];
+    this.r = radius;
+    this.points = genCirclePoints(center, radius); // points on the peripheral
+    this.index = genCircleIndex();
+}
+
+function concatIndex(a, b) {
+    d = a.length / 3 + 1;
+    for (i = 0; i < b.length; i++) {
+	b[i] += d;
+    }
+    return Array.prototype.concat.apply(a, b);
 }
