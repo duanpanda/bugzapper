@@ -21,7 +21,7 @@ var baseColors = [
 ];
 
 var bactIndex = 1;
-var maxBacts = 50;
+var maxBacts = numPoints + 1;
 
 window.onload = function init()
 {
@@ -83,7 +83,6 @@ window.onload = function init()
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index), gl.STATIC_DRAW);
 
-
     render();
 };
 
@@ -108,6 +107,7 @@ function render()
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index), gl.STATIC_DRAW);
 
     gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
+
     window.requestAnimFrame(render);
 }
 
@@ -120,13 +120,11 @@ function genCirclePoints(center, r, az) {
     newCenter[2] = az;
     var pv = [newCenter];
     var d = Math.PI * (360 / numPoints) / 180;
-    for (var theta = 0; theta < 2 * Math.PI; theta += d) {
+    for (var theta = 0; theta < 2 * Math.PI && pv.length <= numPoints; theta += d) {
 	var x = center[0] + r * Math.cos(theta);
 	var y = center[1] + r * Math.sin(theta);
 	var z = az;
-	if (pv.length <= numPoints) {
-	    pv.push(vec3(x, y, z));
-	}
+	pv.push(vec3(x, y, z));
     }
     return pv;
 }
@@ -159,7 +157,7 @@ function Circle(center, radius, colorIndex, az) {
 
 function concatIndex(a, b) {
     if (a.length > 1) {
-	var d = a[a.length - 2] + 1;
+	var d = a[a.length - 2] + 1; // TODO: change
 	for (var i = 0; i < b.length; i++) {
 	    b[i] += d;
 	}
