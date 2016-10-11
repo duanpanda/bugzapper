@@ -25,7 +25,7 @@ var maxBacts = numPoints + 1;
 
 var maxNumTriangles = 5000;
 var maxNumVertices = 3 * maxNumTriangles;
-var vertexBufferSize = Float64Array.BYTES_PER_ELEMENT * 3 * maxNumVertices;
+var vertexBufferSize = Float64Array.BYTES_PER_ELEMENT * 2 * maxNumVertices;
 var colorBufferSize = vertexBufferSize;
 var indexBufferSize = Uint16Array.BYTES_PER_ELEMENT * 3 * maxNumVertices;
 
@@ -41,7 +41,7 @@ window.onload = function init()
     //
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
+    // gl.enable(gl.DEPTH_TEST);
 
     //  Load shaders and initialize attribute buffers
 
@@ -57,7 +57,7 @@ window.onload = function init()
     gl.bufferData(gl.ARRAY_BUFFER, vertexBufferSize, gl.STATIC_DRAW);
 
     var vPosition = gl.getAttribLocation(program, "vPosition");
-    gl.vertexAttribPointer(vPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
 
     // vertex color
@@ -80,10 +80,9 @@ window.onload = function init()
     //  Initialize our data for the disc and bacteria
     //
 
-    var disc = new Circle(vec3(0.0, 0.0, 0.0), // center coordinates
-			  0.8,		       // radius
-			  7,		       // color index for baseColors
-			  0);		       // z
+    var disc = new Circle(vec2(0.0, 0.0), // center coordinates
+			  0.8,		  // radius
+			  7);		  // color index for baseColors
     addObject(disc);
     var intervalID = window.setInterval(genBacteria, 100, disc);
 
@@ -114,18 +113,15 @@ function render()
 /**
  * Generate circle points
  */
-// center is a vec3
-function genCirclePoints(center, r, az)
+// center is a vec2
+function genCirclePoints(center, r)
 {
-    var newCenter = center;
-    newCenter[2] = az;
-    var pv = [newCenter];
+    var pv = [center];
     var d = Math.PI * (360 / numPoints) / 180;
     for (var theta = 0; theta < 2 * Math.PI && pv.length <= numPoints; theta += d) {
 	var x = center[0] + r * Math.cos(theta);
 	var y = center[1] + r * Math.sin(theta);
-	var z = az;
-	pv.push(vec3(x, y, z));
+	pv.push(vec2(x, y));
     }
     return pv;
 }
@@ -144,13 +140,13 @@ function genCircleIndex(pv)
     return iv;
 }
 
-// center is a vec3, radius is a float
-function Circle(center, radius, colorIndex, az)
+// center is a vec2, radius is a float
+function Circle(center, radius, colorIndex)
 {
     this.x = center[0];
     this.y = center[1];
     this.r = radius;
-    this.points = genCirclePoints(center, radius, az); // points on the peripheral
+    this.points = genCirclePoints(center, radius); // points on the peripheral
     this.indices = genCircleIndex(this.points);
     this.color = new Array(this.points.length);
     for (var i = 0; i < this.points.length; i++) {
@@ -175,6 +171,8 @@ function addObject(obj)
     vertices = vertices.concat(obj.points);
     indices = concatIndex(indices, obj.indices);
     colors = colors.concat(obj.color);
+    console.log(vertices);
+    console.log(indices);
     updateGLBuffers();
 }
 
@@ -182,7 +180,7 @@ function genBacteria(disc)
 {
     if (bactIndex < maxBacts) {
 	var i1 = bactIndex;
-	var b1 = new Circle(disc.points[bactIndex], 0.05, 8, -1);
+	var b1 = new Circle(disc.points[bactIndex], 0.05, 8);
 	addObject(b1);
 	bactIndex++;
     }
