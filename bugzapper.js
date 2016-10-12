@@ -215,30 +215,31 @@ function getMatchedThetaIndex(t)
  * t0 is the central angle, dt is the angle that expands from t0 to clockwise
  * direction and anti-clockwise direction.
  *
- * pre: 0 <= t0 <= 359, 0 <= dt <= 359
+ * pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
  * post: the length of the returned list must be an odd number.
  */
 function genBacteriaThetaList(t0, dt)
 {
+    assert(t0 >= 0 && t0 <= 359, 'must: 0 <= t0 <= 359');
+    assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
+    assert((typeof t0 === 'number') && Math.floor(t0) === t0, 'must: t0 is integer');
+    assert((typeof dt === 'number') && Math.floor(dt) === dt, 'must: dt is integer');
     var t1 = (t0 - dt) % 360;
     if (t1 < 0) {
 	t1 += 360;
     }
     var t2 = (t0 + dt) % 360;
-    if (t2 < 0) {
-	t2 += 360;
-    }
     var begin = getMatchedThetaIndex(t1);
     var end = getMatchedThetaIndex(t2);
     var lst = [];
     // 'begin' can be larger than 'end'.
+    var i = begin;
     if (begin < end) {
-	for (var i = begin; i <= end; i++) {
+	for (i = begin; i <= end; i++) {
 	    lst.push(i);
 	}
     }
     else if (begin > end) {
-	var i;
 	for (i = begin; i < 360; i++) {
 	    lst.push(i);
 	}
@@ -246,7 +247,10 @@ function genBacteriaThetaList(t0, dt)
 	    lst.push(i);
 	}
     }
-    // else begin == end, do nothing
+    else if (begin == end) {
+	lst.push(begin);
+    }
+    assert(lst.length % 2 == 1, 'lst.length must be an odd number');
     return lst;
 }
 
@@ -292,4 +296,14 @@ function addObj(indexList)
 {
     indices = indices.concat(indexList);
     updateGLBuffers();
+}
+
+function assert(condition, message) {
+    if (!condition) {
+        message = message || "Assertion failed";
+        if (typeof Error !== "undefined") {
+            throw new Error(message);
+        }
+        throw message; // Fallback
+    }
 }
