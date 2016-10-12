@@ -1,7 +1,7 @@
 var canvas;
 var gl;
 var program;
-var vertices = [];
+
 var indices = [];
 var colors = [];
 var vertexBuffer = null;
@@ -29,6 +29,13 @@ var vertexBufferSize = Float64Array.BYTES_PER_ELEMENT * 2 * maxNumVertices;
 var colorBufferSize = vertexBufferSize;
 var indexBufferSize = Uint16Array.BYTES_PER_ELEMENT * 3 * maxNumVertices;
 
+var thetaList = [];
+var vertices = [];
+var intension = 0;
+var rDisc = 0.7;
+var rCrustInner = 0.71;
+var rCrustOuter = 0.8;
+
 window.onload = function init()
 {
     canvas = document.getElementById("gl-canvas");
@@ -41,7 +48,6 @@ window.onload = function init()
     //
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    // gl.enable(gl.DEPTH_TEST);
 
     //  Load shaders and initialize attribute buffers
 
@@ -80,13 +86,17 @@ window.onload = function init()
     //  Initialize our data for the disc and bacteria
     //
 
-    var disc = new Circle(vec2(0.0, 0.0), // center coordinates
-			  0.8,		  // radius
-			  7);		  // color index for baseColors
-    addObject(disc);
-    var intervalID = window.setInterval(genBacteria, 100, disc);
+    // var disc = new Circle(vec2(0.0, 0.0), // center coordinates
+    // 			  0.8,		  // radius
+    // 			  7);		  // color index for baseColors
+    // addObject(disc);
+    // var intervalID = window.setInterval(genBacteria, 100, disc);
 
-    render();
+    // render();
+    thetaList = genGlobalThetaList(0);
+    console.log(thetaList);
+    vertices = genAllVertices(thetaList, rDisc, rCrustInner, rCrustOuter);
+    console.log(vertices);
 };
 
 function updateGLBuffers()
@@ -108,6 +118,51 @@ function render()
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
     window.requestAnimFrame(render);
+}
+
+/**
+ * Generate a theta list that maps to all the vertices.
+ * intension := 0 or 1 or 2
+ * If intension == 0, generate 360 angles, which is 360 thetas.
+ * If intension == 1, generate 360 / 2 = 180 angles, which is 180 thetas.
+ * If intension == 2, generate 360 / 2 / 2 = 90 angles, which is 90 thetas.
+ */
+function genGlobalThetaList(intension)
+{
+    var t = [];
+    var table = [{n:360, d:1}, {n:180, d:2}, {n:90, d:3}];
+    var n = table[intension].n;
+    var d = table[intension].d;	// delta in radians
+    for (var i = 0; i < n; i = i + d) {
+	t.push(i);
+    }
+    return t;
+}
+
+/**
+ * Generate all vertices that are used in this program.
+ * Put the origin point to the end.
+ * Return a vec2 list.
+ */
+function genAllVertices(thetaList, r1, r2, r3)
+{
+    var t = [];
+    thetaList.forEach(function(theta, index, array) {
+	var p1x = r1 * Math.cos(theta);
+	var p1y = r1 * Math.sin(theta);
+	var p2x = r2 * Math.cos(theta);
+	var p2y = r2 * Math.sin(theta);
+	var p3x = r3 * Math.cos(theta);
+	var p3y = r3 * Math.sin(theta);
+	t.push(vec2(p1x, p1y));
+	t.push(vec2(p2x, p2y));
+	t.push(vec2(p3x, p3y));
+    });
+    return t;
+}
+
+function genDiscTriangles()
+{
 }
 
 /**
