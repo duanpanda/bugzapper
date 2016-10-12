@@ -33,15 +33,16 @@ var thetaList = [];
 var vertices = [];
 var intension = 0;
 var rDisk = 0.7;
-var rCrustInner = 0.71;
+var rCrustInner = 0.702;
 var rCrustOuter = 0.8;
 var diskIndice = [];
 var bacteriaThetas = [];
 var bacteriaIndice = [];
-var diskColorList = [];
-var bacteriaColorList = [];
 var diskColorIndex = 7;
-var bacteriaColorIndex = 2;
+var bacteriaColorIndex = 1;
+
+var bTheta = 50;
+var bDelta = 10;
 
 window.onload = function init()
 {
@@ -93,28 +94,27 @@ window.onload = function init()
     //  Initialize our data for the disk and bacteria
     //
 
-    // var disk = new Circle(vec2(0.0, 0.0), // center coordinates
-    // 			  0.8,		  // radius
-    // 			  7);		  // color index for baseColors
-    // addObject(disk);
-    // var intervalID = window.setInterval(genBacteria, 100, disk);
+    initObjData();
 
-    // render();
-    thetaList = genGlobalThetaList(0);
-    console.log(thetaList);
-    vertices = genAllVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
-    console.log(vertices);
-    diskIndice = genDiskTriangles(thetaList, vertices);
-    console.log(diskIndice);
-    bacteriaThetas = genBacteriaThetaList(30, 2);
-    console.log(bacteriaThetas);
-    bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
-    console.log(bacteriaIndice);
-    diskColorList = setDiskColor(diskIndice, baseColors, diskColorIndex);
-    console.log(diskColorList);
-    bacteriaColorList = setBacteriaColor(bacteriaIndice, baseColors, bacteriaColorIndex);
-    console.log(bacteriaColorList);
+    render();
 };
+
+function initObjData()
+{
+    thetaList = genGlobalThetaList(0);
+    vertices = genAllVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
+    diskIndice = genDiskTriangles(thetaList, vertices);
+    bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
+    bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
+    colors = new Array(vertices.length);
+    for (var i = 0; i < vertices.length; i++) {
+	colors[i] = baseColors[0];
+    }
+    colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
+    colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
+    addObj(diskIndice);
+    addObj(bacteriaIndice);
+}
 
 function updateGLBuffers()
 {
@@ -130,7 +130,7 @@ function updateGLBuffers()
 
 function render()
 {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
@@ -188,14 +188,16 @@ function genAllVertices(thetaList, r1, r2, r3)
 function genDiskTriangles(thetaList, vertices)
 {
     var p = [];
-    var originIndex = vertices.length;
-    for (var i = 0; i < thetaList.length; i++) {
-	var t = thetaList[i];
+    var originIndex = vertices.length - 1;
+    for (var i = 0; i < thetaList.length - 1; i++) {
 	var j = 3 * i;
 	p.push(originIndex);
-	p.push(j + 1);		// 3*i+1
-	p.push(j + 4);		// 3*(i+1)+1
+	p.push(j);		// 3*i
+	p.push(j+3);		// 3*(i+1)
     }
+    p.push(originIndex);
+    p.push(3 * i);
+    p.push(0);
     return p;
 }
 
@@ -243,23 +245,26 @@ function genBacteriaTriangles(ts)
     return p;
 }
 
-function setObjColor(vertexIndice, baseColors, colorIndex)
+function setDiskColor(inout_colors, vertexIndice, baseColors, colorIndex)
 {
-    var c = [];
-    for (var i = 0; i < vertexIndice.length; i++) {
-	c.push(baseColors[colorIndex]);
-    }
-    return c;
+    // for (var i = 0; i < vertexIndice.length; i++) {
+    // 	inout_colors[vertexIndice[i]] = baseColors[colorIndex];
+    // }
+    vertexIndice.forEach(function(item, i, array) {
+	inout_colors[item] = baseColors[colorIndex];
+    });
+    return inout_colors;
 }
 
-function setDiskColor(vertexIndice, baseColors, colorIndex)
+function setBacteriaColor(inout_colors, vertexIndice, baseColors, colorIndex)
 {
-    return setObjColor(vertexIndice, baseColors, colorIndex);
-}
-
-function setBacteriaColor(vertexIndice, baseColors, colorIndex)
-{
-    return setObjColor(vertexIndice, baseColors, colorIndex);
+    // for (var i = 0; i < vertexIndice.length; i++) {
+    // 	inout_colors[vertexIndice[i]] = baseColors[colorIndex];
+    // }
+    vertexIndice.forEach(function(item, i, array) {
+	inout_colors[item] = baseColors[colorIndex];
+    });
+    return inout_colors;
 }
 
 /**
@@ -323,8 +328,12 @@ function addObject(obj)
     vertices = vertices.concat(obj.points);
     indices = concatIndex(indices, obj.indices);
     colors = colors.concat(obj.color);
-    console.log(vertices);
-    console.log(indices);
+    updateGLBuffers();
+}
+
+function addObj(indexList)
+{
+    indices = indices.concat(indexList);
     updateGLBuffers();
 }
 
