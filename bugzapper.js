@@ -32,9 +32,12 @@ var indexBufferSize = Uint16Array.BYTES_PER_ELEMENT * 3 * maxNumVertices;
 var thetaList = [];
 var vertices = [];
 var intension = 0;
-var rDisc = 0.7;
+var rDisk = 0.7;
 var rCrustInner = 0.71;
 var rCrustOuter = 0.8;
+var diskIndice = [];
+var bacteriaThetas = [];
+var bacteriaIndice = [];
 
 window.onload = function init()
 {
@@ -83,20 +86,26 @@ window.onload = function init()
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexBufferSize, gl.STATIC_DRAW);
 
     //
-    //  Initialize our data for the disc and bacteria
+    //  Initialize our data for the disk and bacteria
     //
 
-    // var disc = new Circle(vec2(0.0, 0.0), // center coordinates
+    // var disk = new Circle(vec2(0.0, 0.0), // center coordinates
     // 			  0.8,		  // radius
     // 			  7);		  // color index for baseColors
-    // addObject(disc);
-    // var intervalID = window.setInterval(genBacteria, 100, disc);
+    // addObject(disk);
+    // var intervalID = window.setInterval(genBacteria, 100, disk);
 
     // render();
     thetaList = genGlobalThetaList(0);
     console.log(thetaList);
-    vertices = genAllVertices(thetaList, rDisc, rCrustInner, rCrustOuter);
+    vertices = genAllVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
     console.log(vertices);
+    diskIndice = genDiskTriangles(thetaList, vertices);
+    console.log(diskIndice);
+    bacteriaThetas = genBacteriaThetaList(30, 2);
+    console.log(bacteriaThetas);
+    bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
+    console.log(bacteriaIndice);
 };
 
 function updateGLBuffers()
@@ -122,6 +131,8 @@ function render()
 
 /**
  * Generate a theta list that maps to all the vertices.
+ * In Degrees.
+ *
  * intension := 0 or 1 or 2
  * If intension == 0, generate 360 angles, which is 360 thetas.
  * If intension == 1, generate 360 / 2 = 180 angles, which is 180 thetas.
@@ -148,21 +159,80 @@ function genAllVertices(thetaList, r1, r2, r3)
 {
     var t = [];
     thetaList.forEach(function(theta, index, array) {
-	var p1x = r1 * Math.cos(theta);
-	var p1y = r1 * Math.sin(theta);
-	var p2x = r2 * Math.cos(theta);
-	var p2y = r2 * Math.sin(theta);
-	var p3x = r3 * Math.cos(theta);
-	var p3y = r3 * Math.sin(theta);
+	var ra = theta * Math.PI / 180; // degrees to radians
+	var p1x = r1 * Math.cos(ra);
+	var p1y = r1 * Math.sin(ra);
+	var p2x = r2 * Math.cos(ra);
+	var p2y = r2 * Math.sin(ra);
+	var p3x = r3 * Math.cos(ra);
+	var p3y = r3 * Math.sin(ra);
 	t.push(vec2(p1x, p1y));
 	t.push(vec2(p2x, p2y));
 	t.push(vec2(p3x, p3y));
     });
+    t.push(vec2(0.0, 0.0));
     return t;
 }
 
-function genDiscTriangles()
+/**
+ * Return an index list.  The index references the elements in the vertex list.
+ */
+function genDiskTriangles(thetaList, vertices)
 {
+    var p = [];
+    var originIndex = vertices.length;
+    for (var i = 0; i < thetaList.length; i++) {
+	var t = thetaList[i];
+	var j = 3 * i;
+	p.push(originIndex);
+	p.push(j + 1);		// 3*i+1
+	p.push(j + 4);		// 3*(i+1)+1
+    }
+    return p;
+}
+
+/**
+ * Return an theta index list.
+ * The index references the elements of global thetaList.
+ * t0 is the central angle, dt is the angle that expands from t0 to clockwise
+ * direction and anti-clockwise direction.
+ *
+ * pre: 0 <= t0 <= 359, 0 <= dt <= 359
+ * post: the length of the returned list must be an odd number.
+ */
+function genBacteriaThetaList(t0, dt)
+{
+    var t1 = (t0 - dt) % 360;
+    var t2 = (t0 + dt) % 360;
+    var begin = thetaList.indexOf(t1);
+    var end = thetaList.indexOf(t2);
+    var lst = [];
+    for (var i = begin; i <= end; i++) {
+	lst.push(i);
+    }
+    return lst;
+}
+
+/**
+ * Return an index list.  The index references the elements in vertex list.
+ * ts is a theta index list.
+ */
+function genBacteriaTriangles(ts)
+{
+    var p = [];
+    for (var i = 0; i <= ts.length - 3; i += 2) {
+	var a = 3 * ts[i] + 1;
+	var b = 3 * ts[i] + 2;
+	var c = 3 * ts[i+1] + 1;
+	var d = 3 * ts[i+1] + 2;
+	var e = 3 * ts[i+2] + 1;
+	var f = 3 * ts[i+2] + 2;
+	p.push(vec3(a, d, b));
+	p.push(vec3(a, c, d));
+	p.push(vec3(c, f, d));
+	p.push(vec3(c, e, f));
+    }
+    return p;
 }
 
 /**
@@ -231,11 +301,11 @@ function addObject(obj)
     updateGLBuffers();
 }
 
-function genBacteria(disc)
+function genBacteria(disk)
 {
     if (bactIndex < maxBacts) {
 	var i1 = bactIndex;
-	var b1 = new Circle(disc.points[bactIndex], 0.05, 8);
+	var b1 = new Circle(disk.points[bactIndex], 0.05, 8);
 	addObject(b1);
 	bactIndex++;
     }
