@@ -2,12 +2,10 @@ var canvas;
 var gl;
 var program;
 
-var indices = [];
-var colors = [];
 var vertexBuffer = null;
 var colorBuffer = null;
 var indexBuffer = null;
-var numPoints = 80; // number of points per circle
+
 var baseColors = [
     vec3(0.0, 0.0, 0.0), // black
     vec3(1.0, 0.0, 0.0), // red
@@ -20,9 +18,6 @@ var baseColors = [
     vec3(0.8, 0.2, 0.2)	 // dark red
 ];
 
-var bactIndex = 1;
-var maxBacts = numPoints + 1;
-
 var maxNumTriangles = 5000;
 var maxNumVertices = 3 * maxNumTriangles;
 var vertexBufferSize = Float64Array.BYTES_PER_ELEMENT * 2 * maxNumVertices;
@@ -31,6 +26,8 @@ var indexBufferSize = Uint16Array.BYTES_PER_ELEMENT * 3 * maxNumVertices;
 
 var thetaList = [];
 var vertices = [];
+var indices = [];
+var colors = [];
 var intension = 0;
 var rDisk = 0.7;
 var rCrustInner = 0.702;
@@ -41,8 +38,8 @@ var bacteriaIndice = [];
 var diskColorIndex = 7;
 var bacteriaColorIndex = 1;
 
-var bTheta = 50;
-var bDelta = 10;
+var bTheta = 20;
+var bDelta = 70;
 
 window.onload = function init()
 {
@@ -101,7 +98,7 @@ window.onload = function init()
 
 function initObjData()
 {
-    thetaList = genGlobalThetaList(0);
+    thetaList = genGlobalThetaList(intension);
     vertices = genAllVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
     diskIndice = genDiskTriangles(thetaList, vertices);
     bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
@@ -131,9 +128,7 @@ function updateGLBuffers()
 function render()
 {
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-
     window.requestAnimFrame(render);
 }
 
@@ -149,10 +144,10 @@ function render()
 function genGlobalThetaList(intension)
 {
     var t = [];
-    var table = [{n:360, d:1}, {n:180, d:2}, {n:90, d:3}];
+    var table = [{n:360, d:1}, {n:180, d:2}, {n:90, d:4}, {n:72, d:5}, {n:60, d:6}];
     var n = table[intension].n;
     var d = table[intension].d;	// delta in radians
-    for (var i = 0; i < n; i = i + d) {
+    for (var i = 0; i < 360; i = i + d) {
 	t.push(i);
     }
     return t;
@@ -202,6 +197,19 @@ function genDiskTriangles(thetaList, vertices)
 }
 
 /**
+ * In the global thetaList, find the best matched one, and return its index.
+ */
+function getMatchedThetaIndex(t)
+{
+    var index = thetaList.indexOf(t);
+    if (index == -1) {
+	// not found
+	// TODO
+    }
+    return index;
+}
+
+/**
  * Return an theta index list.
  * The index references the elements of global thetaList.
  * t0 is the central angle, dt is the angle that expands from t0 to clockwise
@@ -213,13 +221,32 @@ function genDiskTriangles(thetaList, vertices)
 function genBacteriaThetaList(t0, dt)
 {
     var t1 = (t0 - dt) % 360;
-    var t2 = (t0 + dt) % 360;
-    var begin = thetaList.indexOf(t1);
-    var end = thetaList.indexOf(t2);
-    var lst = [];
-    for (var i = begin; i <= end; i++) {
-	lst.push(i);
+    if (t1 < 0) {
+	t1 += 360;
     }
+    var t2 = (t0 + dt) % 360;
+    if (t2 < 0) {
+	t2 += 360;
+    }
+    var begin = getMatchedThetaIndex(t1);
+    var end = getMatchedThetaIndex(t2);
+    var lst = [];
+    // 'begin' can be larger than 'end'.
+    if (begin < end) {
+	for (var i = begin; i <= end; i++) {
+	    lst.push(i);
+	}
+    }
+    else if (begin > end) {
+	var i;
+	for (i = begin; i < 360; i++) {
+	    lst.push(i);
+	}
+	for (i = 0; i < end; i++) {
+	    lst.push(i);
+	}
+    }
+    // else begin == end, do nothing
     return lst;
 }
 
@@ -247,9 +274,6 @@ function genBacteriaTriangles(ts)
 
 function setDiskColor(inout_colors, vertexIndice, baseColors, colorIndex)
 {
-    // for (var i = 0; i < vertexIndice.length; i++) {
-    // 	inout_colors[vertexIndice[i]] = baseColors[colorIndex];
-    // }
     vertexIndice.forEach(function(item, i, array) {
 	inout_colors[item] = baseColors[colorIndex];
     });
@@ -258,91 +282,14 @@ function setDiskColor(inout_colors, vertexIndice, baseColors, colorIndex)
 
 function setBacteriaColor(inout_colors, vertexIndice, baseColors, colorIndex)
 {
-    // for (var i = 0; i < vertexIndice.length; i++) {
-    // 	inout_colors[vertexIndice[i]] = baseColors[colorIndex];
-    // }
     vertexIndice.forEach(function(item, i, array) {
 	inout_colors[item] = baseColors[colorIndex];
     });
     return inout_colors;
 }
 
-/**
- * Generate circle points
- */
-// center is a vec2
-function genCirclePoints(center, r)
-{
-    var pv = [center];
-    var d = Math.PI * (360 / numPoints) / 180;
-    for (var theta = 0; theta < 2 * Math.PI && pv.length <= numPoints; theta += d) {
-	var x = center[0] + r * Math.cos(theta);
-	var y = center[1] + r * Math.sin(theta);
-	pv.push(vec2(x, y));
-    }
-    return pv;
-}
-
-function genCircleIndex(pv)
-{
-    var iv = [];
-    for (var i = 1; i < pv.length - 1; i++) {
-	iv.push(0);
-	iv.push(i);
-	iv.push(i+1);
-    }
-    iv.push(0);
-    iv.push(i);
-    iv.push(1);
-    return iv;
-}
-
-// center is a vec2, radius is a float
-function Circle(center, radius, colorIndex)
-{
-    this.x = center[0];
-    this.y = center[1];
-    this.r = radius;
-    this.points = genCirclePoints(center, radius); // points on the peripheral
-    this.indices = genCircleIndex(this.points);
-    this.color = new Array(this.points.length);
-    for (var i = 0; i < this.points.length; i++) {
-	this.color[i] = baseColors[colorIndex];
-    }
-}
-
-function concatIndex(a, b)
-{
-    if (a.length > 1) {
-	var d = a[a.length - 2] + 1; // TODO: change
-	for (var i = 0; i < b.length; i++) {
-	    b[i] += d;
-	}
-    }
-    return Array.prototype.concat.apply(a, b);
-}
-
-// This function modifies global variables!
-function addObject(obj)
-{
-    vertices = vertices.concat(obj.points);
-    indices = concatIndex(indices, obj.indices);
-    colors = colors.concat(obj.color);
-    updateGLBuffers();
-}
-
 function addObj(indexList)
 {
     indices = indices.concat(indexList);
     updateGLBuffers();
-}
-
-function genBacteria(disk)
-{
-    if (bactIndex < maxBacts) {
-	var i1 = bactIndex;
-	var b1 = new Circle(disk.points[bactIndex], 0.05, 8);
-	addObject(b1);
-	bactIndex++;
-    }
 }
