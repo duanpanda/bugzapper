@@ -38,6 +38,10 @@ var rCrustOuter = 0.8;
 var diskIndice = [];
 var bacteriaThetas = [];
 var bacteriaIndice = [];
+var diskColorList = [];
+var bacteriaColorList = [];
+var diskColorIndex = 7;
+var bacteriaColorIndex = 2;
 
 window.onload = function init()
 {
@@ -106,6 +110,10 @@ window.onload = function init()
     console.log(bacteriaThetas);
     bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
     console.log(bacteriaIndice);
+    diskColorList = setDiskColor(diskIndice, baseColors, diskColorIndex);
+    console.log(diskColorList);
+    bacteriaColorList = setBacteriaColor(bacteriaIndice, baseColors, bacteriaColorIndex);
+    console.log(bacteriaColorList);
 };
 
 function updateGLBuffers()
@@ -227,12 +235,31 @@ function genBacteriaTriangles(ts)
 	var d = 3 * ts[i+1] + 2;
 	var e = 3 * ts[i+2] + 1;
 	var f = 3 * ts[i+2] + 2;
-	p.push(vec3(a, d, b));
-	p.push(vec3(a, c, d));
-	p.push(vec3(c, f, d));
-	p.push(vec3(c, e, f));
+	p.push(a); p.push(d); p.push(b);
+	p.push(a); p.push(c); p.push(d);
+	p.push(c); p.push(f); p.push(d);
+	p.push(c); p.push(e); p.push(f);
     }
     return p;
+}
+
+function setObjColor(vertexIndice, baseColors, colorIndex)
+{
+    var c = [];
+    for (var i = 0; i < vertexIndice.length; i++) {
+	c.push(baseColors[colorIndex]);
+    }
+    return c;
+}
+
+function setDiskColor(vertexIndice, baseColors, colorIndex)
+{
+    return setObjColor(vertexIndice, baseColors, colorIndex);
+}
+
+function setBacteriaColor(vertexIndice, baseColors, colorIndex)
+{
+    return setObjColor(vertexIndice, baseColors, colorIndex);
 }
 
 /**
