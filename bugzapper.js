@@ -24,25 +24,32 @@ var vertexBufferSize = Float64Array.BYTES_PER_ELEMENT * 2 * maxNumVertices;
 var colorBufferSize = vertexBufferSize;
 var indexBufferSize = Uint16Array.BYTES_PER_ELEMENT * 3 * maxNumVertices;
 
+// The following resources are shared among the disk and all the bacterias.
 var thetaList = [];
 var vertices = [];
 var indices = [];
 var colors = [];
+
+// attributes that configure the game and the game objects
 var intension = 0;		// now only 0 works
 var rDisk = 0.7;
 var rCrustInner = rDisk;
 var rCrustOuter = 0.8;
+var diskColorIndex = 7;
+var bacteriaColorIndex = 8;
+var bac2ColorIndex = 6;
+var bTheta = 0;
+var bDelta = 1;
+
+// game objects
+var diskObj = null;
+var bacteriaList = [];
+
 var diskIndice = [];
 var bacteriaThetas = [];
 var bacteriaIndice = [];
 var bac2Thetas = [];
 var bac2Indice = [];
-var diskColorIndex = 7;
-var bacteriaColorIndex = 8;
-var bac2ColorIndex = 6;
-
-var bTheta = 0;
-var bDelta = 1;
 
 var intervalId = 0;
 
@@ -98,31 +105,21 @@ window.onload = function init()
 
     initObjData();
 
+    updateGLBuffers();
+
     render();
 };
 
 function initObjData()
 {
     thetaList = genGlobalThetaList(intension);
-    vertices = genAllVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
-    diskIndice = genDiskTriangles(thetaList, vertices);
-    bTheta = getRandomInt(0, 360);
-    bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
-    bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
-    var bTheta2 = bTheta + 10;
-    bac2Thetas = genBacteriaThetaList(bTheta2, bDelta);
-    bac2Indice = genBacteriaTriangles(bac2Thetas);
-    colors = new Array(vertices.length);
-    for (var i = 0; i < vertices.length; i++) {
-	colors[i] = baseColors[0];
-    }
+    vertices = genGlobalVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
+    indices = genGlobalIndice();
+    colors = genGlobalColorBuffer();
+    clearGlobalColorBuffer();
     colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
     colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
-    colors = setBacteriaColor(colors, bac2Indice, baseColors, bac2ColorIndex);
-    addObj(diskIndice);
-    addObj(bacteriaIndice);
-    addObj(bac2Indice);
-    invervalId = window.setInterval(updateGame, 150);
+    // invervalId = window.setInterval(updateGame, 150);
 }
 
 function updateGame()
@@ -132,22 +129,19 @@ function updateGame()
 	window.clearInterval(intervalId);
 	return;
     }
-    bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
+    bacteriaThetas = genBactThetaIndexList(bTheta, bDelta);
     bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
     var bTheta2 = bTheta + 10;
-    bac2Thetas = genBacteriaThetaList(bTheta2, bDelta);
+    bac2Thetas = genBactThetaIndexList(bTheta2, bDelta);
     bac2Indice = genBacteriaTriangles(bac2Thetas);
-    colors = new Array(vertices.length);
-    for (var i = 0; i < vertices.length; i++) {
-	colors[i] = baseColors[0];
-    }
+    clearGlobalColorBuffer();
     colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
     colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
     colors = setBacteriaColor(colors, bac2Indice, baseColors, bac2ColorIndex);
     indices = [];
-    addObj(diskIndice);
-    addObj(bacteriaIndice);
-    addObj(bac2Indice);
+    addObj2(diskIndice);
+    addObj2(bacteriaIndice);
+    addObj2(bac2Indice);
 }
 
 function updateGLBuffers()
@@ -196,7 +190,7 @@ function genGlobalThetaList(intension)
  * Put the origin point to the end.
  * Return a vec2 list.
  */
-function genAllVertices(thetaList, r1, r2, r3)
+function genGlobalVertices(thetaList, r1, r2, r3)
 {
     var t = [];
     thetaList.forEach(function(theta, index, array) {
@@ -213,6 +207,25 @@ function genAllVertices(thetaList, r1, r2, r3)
     });
     t.push(vec2(0.0, 0.0));
     return t;
+}
+
+function genGlobalIndice()
+{
+    diskIndice = genDiskTriangles(thetaList, vertices);
+    bacteriaIndice = genBacteriaTriangles(thetaList.concat([0]));
+    return indices = diskIndice.concat(bacteriaIndice);
+}
+
+function genGlobalColorBuffer()
+{
+    return colors = new Array(vertices.length);
+}
+
+function clearGlobalColorBuffer()
+{
+    for (var i = 0; i < vertices.length; i++) {
+	colors[i] = baseColors[0];
+    }
 }
 
 /**
@@ -248,15 +261,10 @@ function getMatchedThetaIndex(t)
 }
 
 /**
- * Return an theta index list.
- * The index references the elements of global thetaList.
- * t0 is the central angle, dt is the angle that expands from t0 to clockwise
- * direction and anti-clockwise direction.
- *
+ * Return an theta range: from thetaBegin to thetaEnd.
  * pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
- * post: the length of the returned list must be an odd number.
  */
-function genBacteriaThetaList(t0, dt)
+function genBactThetaRange(t0, dt)
 {
     assert(t0 >= 0 && t0 <= 359, 'must: 0 <= t0 <= 359');
     assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
@@ -267,8 +275,24 @@ function genBacteriaThetaList(t0, dt)
 	t1 += 360;
     }
     var t2 = (t0 + dt) % 360;
-    var begin = getMatchedThetaIndex(t1);
-    var end = getMatchedThetaIndex(t2);
+    return {thetaBegin:t1, thetaEnd:t2};
+}
+
+function getThetaIndexPair(t1, t2)
+{
+    var begin = getMatchedThetaIndex(thetaBegin);
+    var end = getMatchedThetaIndex(thetaEnd);
+    return {begin:begin, end:end};
+}
+
+/**
+ * Return an theta index list.
+ * The input are indices that reference the elements of global thetaList.
+ *
+ * post: the length of the returned list must be an odd number.
+ */
+function genBactThetaIndexList(begin, end)
+{
     var lst = [];
     // 'begin' can be larger than 'end'.
     var i = begin;
@@ -294,7 +318,7 @@ function genBacteriaThetaList(t0, dt)
 
 /**
  * Return an index list.  The index references the elements in vertex list.
- * ts is a theta index list.
+ * ts is a theta index list that references the global theta list.
  */
 function genBacteriaTriangles(ts)
 {
@@ -330,7 +354,7 @@ function setBacteriaColor(inout_colors, vertexIndice, baseColors, colorIndex)
     return inout_colors;
 }
 
-function addObj(indexList)
+function addObj2(indexList)
 {
     indices = indices.concat(indexList);
     updateGLBuffers();
@@ -355,4 +379,36 @@ function getRandomInt(min, max)
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
+}
+
+/**
+ * GameObj is a special pointer to the global indice[]
+ * which contains a set of triples that consists triangles.
+ * Each GameObj points to a subset of indice[], which means
+ * that subset belongs to this GameObj.
+ *
+ * indexBegin is the index at the beginning of the subset. (included)
+ * indexEnd is the index at the end of the subset. (included)
+ */
+function GameObj(indexBegin, indexEnd)
+{
+    this.indexBegin = indexBegin;
+    this.indexEnd = indexEnd;
+}
+
+function Bacteria(t, dt)
+{
+    var rangePair = genBactThetaRange(t, dt);
+    this.thetaBegin = rangePair.thetaBegin;
+    this.thetaEnd = rangePair.thetaEnd;
+
+    var indexPair = getThetaIndexPair(this.thetaBegin, this.thetaEnd);
+    var thetaIndexList = genBactThetaIndexList(indexPair.begin, indexPair.end);
+    this.vIndexBegin = 0;
+    this.vIndexEnd = 0;
+}
+
+function addBacteria(obj)
+{
+    bacteriaList.push(obj);
 }
