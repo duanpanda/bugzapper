@@ -37,19 +37,16 @@ var rCrustInner = rDisk;
 var rCrustOuter = 0.8;
 var diskColorIndex = 7;
 var bacteriaColorIndex = 8;
-var bac2ColorIndex = 6;
-var bTheta = 0;
-var bDelta = 1;
+
+// game controls
+var bGameTicks = 1;
 
 // game objects
 var diskObj = null;
 var bacteriaList = [];
 
 var diskIndice = [];
-var bacteriaThetas = [];
 var bacteriaIndice = [];
-var bac2Thetas = [];
-var bac2Indice = [];
 
 var intervalId = 0;
 
@@ -61,12 +58,12 @@ window.onload = function init()
     if (!gl) { alert("WebGL isn't available"); }
 
     //
-    //  Configure WebGL
+    //	Configure WebGL
     //
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-    //  Load shaders and initialize attribute buffers
+    //	Load shaders and initialize attribute buffers
 
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
@@ -100,7 +97,7 @@ window.onload = function init()
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexBufferSize, gl.STATIC_DRAW);
 
     //
-    //  Initialize our data for the disk and bacteria
+    //	Initialize our data for the disk and bacteria
     //
 
     initObjData();
@@ -119,29 +116,27 @@ function initObjData()
     clearGlobalColorBuffer();
     colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
     colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
-    // invervalId = window.setInterval(updateGame, 150);
+    for (var i = 0; i < 1; i++) {
+	// bacteriaList[i] = new Bacteria(getRandomInt(0, 360), 1);
+	bacteriaList[i] = new Bacteria(10, 15);
+	console.log(bacteriaList[i]);
+	console.log(bacteriaList[i].getIndiceList());
+    }
+    // intervalId = window.setInterval(updateGame, 150);
 }
 
 function updateGame()
 {
-    bDelta++;
-    if (bDelta > 15) {
+    bGameTicks++;
+    if (bGameTicks > 16) {
 	window.clearInterval(intervalId);
+	bGameTicks = 1;
 	return;
     }
-    bacteriaThetas = genBactThetaIndexList(bTheta, bDelta);
-    bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
-    var bTheta2 = bTheta + 10;
-    bac2Thetas = genBactThetaIndexList(bTheta2, bDelta);
-    bac2Indice = genBacteriaTriangles(bac2Thetas);
-    clearGlobalColorBuffer();
-    colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
-    colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
-    colors = setBacteriaColor(colors, bac2Indice, baseColors, bac2ColorIndex);
-    indices = [];
-    addObj2(diskIndice);
-    addObj2(bacteriaIndice);
-    addObj2(bac2Indice);
+    for (var i = 0; i < bacteriaList.length; i++) {
+	var newdt = bacteriaList[i].dt + 1;
+	bacteriaList[i].update(bacteriaList[i].t, newdt);
+    }
 }
 
 function updateGLBuffers()
@@ -237,13 +232,20 @@ function genDiskTriangles(thetaList, vertices)
     var originIndex = vertices.length - 1;
     for (var i = 0; i < thetaList.length - 1; i++) {
 	var j = 3 * i;
+	// p.push(vec3(originIndex,
+	// 	    j,		// 3*i
+	// 	    j+3));	// 3*(i+1)
 	p.push(originIndex);
 	p.push(j);		// 3*i
 	p.push(j+3);		// 3*(i+1)
+
     }
     p.push(originIndex);
     p.push(3 * i);
     p.push(0);
+    // p.push(vec3(originIndex,
+    // 		3 * i,
+    // 		0));
     return p;
 }
 
@@ -260,29 +262,11 @@ function getMatchedThetaIndex(t)
     return index;
 }
 
-/**
- * Return an theta range: from thetaBegin to thetaEnd.
- * pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
- */
-function genBactThetaRange(t0, dt)
-{
-    assert(t0 >= 0 && t0 <= 359, 'must: 0 <= t0 <= 359');
-    assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
-    assert((typeof t0 === 'number') && Math.floor(t0) === t0, 'must: t0 is integer');
-    assert((typeof dt === 'number') && Math.floor(dt) === dt, 'must: dt is integer');
-    var t1 = (t0 - dt) % 360;
-    if (t1 < 0) {
-	t1 += 360;
-    }
-    var t2 = (t0 + dt) % 360;
-    return {thetaBegin:t1, thetaEnd:t2};
-}
-
 function getThetaIndexPair(t1, t2)
 {
-    var begin = getMatchedThetaIndex(thetaBegin);
-    var end = getMatchedThetaIndex(thetaEnd);
-    return {begin:begin, end:end};
+    var begin = getMatchedThetaIndex(t1);
+    var end = getMatchedThetaIndex(t2);
+    return [begin, end];
 }
 
 /**
@@ -334,6 +318,10 @@ function genBacteriaTriangles(ts)
 	p.push(a); p.push(c); p.push(d);
 	p.push(c); p.push(f); p.push(d);
 	p.push(c); p.push(e); p.push(f);
+	// p.push(vec3(a, d, b));
+	// p.push(vec3(a, c, d));
+	// p.push(vec3(c, f, d));
+	// p.push(vec3(c, e, f));
     }
     return p;
 }
@@ -354,20 +342,14 @@ function setBacteriaColor(inout_colors, vertexIndice, baseColors, colorIndex)
     return inout_colors;
 }
 
-function addObj2(indexList)
-{
-    indices = indices.concat(indexList);
-    updateGLBuffers();
-}
-
 function assert(condition, message)
 {
     if (!condition) {
-        message = message || "Assertion failed";
-        if (typeof Error !== "undefined") {
-            throw new Error(message);
-        }
-        throw message; // fallback
+	message = message || "Assertion failed";
+	if (typeof Error !== "undefined") {
+	    throw new Error(message);
+	}
+	throw message; // fallback
     }
 }
 
@@ -388,27 +370,104 @@ function getRandomInt(min, max)
  * that subset belongs to this GameObj.
  *
  * indexBegin is the index at the beginning of the subset. (included)
- * indexEnd is the index at the end of the subset. (included)
+ * indexEnd is the index at the end of the subset. (excluded)
  */
 function GameObj(indexBegin, indexEnd)
 {
-    this.indexBegin = indexBegin;
-    this.indexEnd = indexEnd;
+    this.vIndexBegin = indexBegin;
+    this.vIndexEnd = indexEnd;
 }
 
+// pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
 function Bacteria(t, dt)
 {
-    var rangePair = genBactThetaRange(t, dt);
-    this.thetaBegin = rangePair.thetaBegin;
-    this.thetaEnd = rangePair.thetaEnd;
+    assert(t >= 0 && t <= 359, 'must: 0 <= t <= 359');
+    assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
+    assert((typeof t === 'number') && Math.floor(t) === t, 'must: t is integer');
+    assert((typeof dt === 'number') && Math.floor(dt) === dt, 'must: dt is integer');
 
-    var indexPair = getThetaIndexPair(this.thetaBegin, this.thetaEnd);
-    var thetaIndexList = genBactThetaIndexList(indexPair.begin, indexPair.end);
-    this.vIndexBegin = 0;
-    this.vIndexEnd = 0;
+    GameObj.call(0, 0);
+    this.t = t;
+    this.dt = dt;
+
+    this.update = function(t, dt) {
+	this.t = t;
+	this.dt = dt;
+	var rangePair = rd_pair_rem([t-dt, t+dt], 360);
+	this.thetaBegin = rangePair[0];
+	this.thetaEnd = rangePair[1]; // included
+
+	// indexPair.end is included
+	var indexPair = getThetaIndexPair(this.thetaBegin, this.thetaEnd);
+
+	// thetaList.length is the number of vertices on the disk circle
+	// which is the first part in the global indices[].
+	this.vIndexBegin = indexPair[0] * 2;
+
+	// vIndexEnd is excluded
+	this.vIndexEnd = indexPair[1] * 2;
+    };
+
+    this.update(t, dt);
+
+    this.getIndiceList = function() {
+	var a = this.vIndexBegin;
+	var b = this.vIndexEnd;
+	var indexRanges = rd_gen_ranges([a, b], bacteriaIndice.length / 3);
+	var indiceList = [];
+	indexRanges.forEach(function(range, index, array) {
+	    indiceList.push(indices.slice(range[0] * 3 + thetaList.length * 3,
+					  range[1] * 3 + thetaList.length * 3));
+	});
+	return indiceList;
+    };
 }
 
 function addBacteria(obj)
 {
     bacteriaList.push(obj);
+}
+
+/**
+ * Return the positive remainder of dividend and positive divisor.
+ */
+function rd_rem(dividend, divisor)
+{
+    var r = dividend % divisor;
+    if (r < 0) {
+	r += divisor;
+    }
+    return r;
+}
+
+// divisor is the size of the cycle list.
+// pair is of this form [a, b], that references the section from na to nb
+// in the cycle list.
+//
+// This function transform pair and return a new pair that uses positive index
+// to reference the elements in the cycle list.
+function rd_pair_rem(pair, divisor)
+{
+    var a = rd_rem(pair[0], divisor);
+    var b = rd_rem(pair[1], divisor);
+    return [a, b];
+}
+
+function rd_gen_ranges(pair, divisor)
+{
+    var a = pair[0];
+    var b = pair[1];
+    var lst = [];
+    var i = a;
+    if (a < b) {
+	lst.push(pair);
+    }
+    else if (a > b) {
+	lst.push([a, divisor]);
+	lst.push([0, b]);
+    }
+    else if (a == b) {
+	lst.push(pair);
+    }
+    return lst;
 }
