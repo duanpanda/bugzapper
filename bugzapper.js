@@ -28,7 +28,7 @@ var thetaList = [];
 var vertices = [];
 var indices = [];
 var colors = [];
-var intension = 0;
+var intension = 0;		// now only 0 works
 var rDisk = 0.7;
 var rCrustInner = 0.702;
 var rCrustOuter = 0.8;
@@ -150,6 +150,7 @@ function genGlobalThetaList(intension)
     for (var i = 0; i < 360; i = i + d) {
 	t.push(i);
     }
+    assert(t.length == n, 't.length:' + t.length + ' must == n:' + n);
     return t;
 }
 
