@@ -38,8 +38,10 @@ var bacteriaIndice = [];
 var diskColorIndex = 7;
 var bacteriaColorIndex = 8;
 
-var bTheta = 20;
-var bDelta = 70;
+var bTheta = 0;
+var bDelta = 1;
+
+var intervalId = 0;
 
 window.onload = function init()
 {
@@ -101,6 +103,7 @@ function initObjData()
     thetaList = genGlobalThetaList(intension);
     vertices = genAllVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
     diskIndice = genDiskTriangles(thetaList, vertices);
+    bTheta = getRandomInt(0, 360);
     bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
     bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
     colors = new Array(vertices.length);
@@ -109,6 +112,26 @@ function initObjData()
     }
     colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
     colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
+    addObj(diskIndice);
+    addObj(bacteriaIndice);
+    invervalId = window.setInterval(updateGame, 150);
+}
+
+function updateGame()
+{
+    bDelta++;
+    if (bDelta > 15) {
+	window.clearInterval(intervalId);
+	return;
+    }
+    bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
+    bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
+    for (var i = 0; i < vertices.length; i++) {
+	colors[i] = baseColors[0];
+    }
+    colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
+    colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
+    indices = [];
     addObj(diskIndice);
     addObj(bacteriaIndice);
 }
@@ -305,7 +328,7 @@ function assert(condition, message) {
         if (typeof Error !== "undefined") {
             throw new Error(message);
         }
-        throw message; // Fallback
+        throw message; // fallback
     }
 }
 
