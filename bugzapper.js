@@ -30,13 +30,16 @@ var indices = [];
 var colors = [];
 var intension = 0;		// now only 0 works
 var rDisk = 0.7;
-var rCrustInner = 0.702;
+var rCrustInner = rDisk;
 var rCrustOuter = 0.8;
 var diskIndice = [];
 var bacteriaThetas = [];
 var bacteriaIndice = [];
+var bac2Thetas = [];
+var bac2Indice = [];
 var diskColorIndex = 7;
 var bacteriaColorIndex = 8;
+var bac2ColorIndex = 6;
 
 var bTheta = 0;
 var bDelta = 1;
@@ -61,7 +64,7 @@ window.onload = function init()
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
-    // Load the data into the GPU
+    // Allocate VBOs in GPU and set Attributes to point to VBOs
 
     // vertex coordinates
 
@@ -106,14 +109,19 @@ function initObjData()
     bTheta = getRandomInt(0, 360);
     bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
     bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
+    var bTheta2 = bTheta + 10;
+    bac2Thetas = genBacteriaThetaList(bTheta2, bDelta);
+    bac2Indice = genBacteriaTriangles(bac2Thetas);
     colors = new Array(vertices.length);
     for (var i = 0; i < vertices.length; i++) {
 	colors[i] = baseColors[0];
     }
     colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
     colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
+    colors = setBacteriaColor(colors, bac2Indice, baseColors, bac2ColorIndex);
     addObj(diskIndice);
     addObj(bacteriaIndice);
+    addObj(bac2Indice);
     invervalId = window.setInterval(updateGame, 150);
 }
 
@@ -126,14 +134,20 @@ function updateGame()
     }
     bacteriaThetas = genBacteriaThetaList(bTheta, bDelta);
     bacteriaIndice = genBacteriaTriangles(bacteriaThetas);
+    var bTheta2 = bTheta + 10;
+    bac2Thetas = genBacteriaThetaList(bTheta2, bDelta);
+    bac2Indice = genBacteriaTriangles(bac2Thetas);
+    colors = new Array(vertices.length);
     for (var i = 0; i < vertices.length; i++) {
 	colors[i] = baseColors[0];
     }
     colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
     colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
+    colors = setBacteriaColor(colors, bac2Indice, baseColors, bac2ColorIndex);
     indices = [];
     addObj(diskIndice);
     addObj(bacteriaIndice);
+    addObj(bac2Indice);
 }
 
 function updateGLBuffers()
@@ -322,7 +336,8 @@ function addObj(indexList)
     updateGLBuffers();
 }
 
-function assert(condition, message) {
+function assert(condition, message)
+{
     if (!condition) {
         message = message || "Assertion failed";
         if (typeof Error !== "undefined") {
