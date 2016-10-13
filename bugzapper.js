@@ -144,7 +144,7 @@ function render()
 function genGlobalThetaList(intension)
 {
     var t = [];
-    var table = [{n:360, d:1}, {n:180, d:2}, {n:90, d:4}, {n:72, d:5}, {n:60, d:6}];
+    var table = [{n:360, d:1}, {n:180, d:2}, {n:90, d:4}];
     var n = table[intension].n;
     var d = table[intension].d;	// delta in radians
     for (var i = 0; i < 360; i = i + d) {
@@ -307,4 +307,14 @@ function assert(condition, message) {
         }
         throw message; // Fallback
     }
+}
+
+/**
+ * Return a random integer between min (included) and max (excluded).
+ */
+function getRandomInt(min, max)
+{
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min;
 }
