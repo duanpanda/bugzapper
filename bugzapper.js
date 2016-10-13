@@ -36,7 +36,7 @@ var diskIndice = [];
 var bacteriaThetas = [];
 var bacteriaIndice = [];
 var diskColorIndex = 7;
-var bacteriaColorIndex = 1;
+var bacteriaColorIndex = 8;
 
 var bTheta = 20;
 var bDelta = 70;
@@ -243,14 +243,14 @@ function genBacteriaThetaList(t0, dt)
 	for (i = begin; i < 360; i++) {
 	    lst.push(i);
 	}
-	for (i = 0; i < end; i++) {
+	for (i = 0; i <= end; i++) {
 	    lst.push(i);
 	}
     }
     else if (begin == end) {
 	lst.push(begin);
     }
-    assert(lst.length % 2 == 1, 'lst.length must be an odd number');
+    assert(lst.length % 2 == 1, 'lst.length:' + lst.length + ' must be an odd number');
     return lst;
 }
 
