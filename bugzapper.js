@@ -100,6 +100,24 @@ window.onload = function init()
 
     updateGLBuffers();
 
+    canvas.addEventListener("mousedown", function(event) {
+	var x = event.clientX;
+	var y = event.clientY;
+	console.log('xy:', x, y);
+	var glx = 2 * x / canvas.width - 1;
+	var gly = 2 * (canvas.height - y) / canvas.height - 1;
+	console.log('gl_xy:', glx, gly);
+	var polar = xy_to_polar(glx, gly);
+	console.log('polar:', polar[0], polar[1]);
+	for (var i = 0; i < bacteriaList.length; i++) {
+	    var theta1 = bacteriaList[i].thetaBegin;
+	    var theta2 = bacteriaList[i].thetaEnd;
+	    if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
+		console.log('mouse in', i+'th', 'bacteria');
+	    }
+	}
+    });
+
     render();
 };
 
@@ -124,17 +142,17 @@ function initObjData()
 function updateGame()
 {
     gameTicks++;
-    // if (gameTicks > 10000) {
-    // 	window.clearInterval(intervalId);
-    // 	gameTicks = 1;
-    // 	return;
-    // }
+    if (gameTicks > 10000) {
+	window.clearInterval(intervalId);
+	gameTicks = 1;
+	return;
+    }
     clearGlobalColorBuffer();
     colors = setObjColor(diskIndice, baseColors, diskColorIndex);
     for (var i = 0; i < bacteriaList.length; i++) {
 	var olddt = bacteriaList[i].dt;
 	if (olddt < maxDt) {
-	    var newdt = bacteriaList[i].dt + 1;
+	    var newdt = olddt + 1;
 	    bacteriaList[i].update(bacteriaList[i].t, newdt);
 	}
 	colors = setObjColor(bacteriaList[i].getIndice(),
@@ -426,4 +444,29 @@ function rd_gen_ranges(pair, divisor)
 	lst.push(pair);
     }
     return lst;
+}
+
+function xy_to_polar(x, y)
+{
+    var theta = Math.atan(y / x);
+    if ((y > 0 && x < 0) || (y < 0 && x < 0)) {
+	theta += Math.PI;
+    }
+    if (theta < 0) {
+	theta += Math.PI * 2;
+    }
+    var r = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    return [r, theta];
+}
+
+// theta1 and theta2 are in degrees
+// pre: r1 <= r2
+// pre: no matter who is larger, theta1 is the beginning of the range, theta2
+//      is the end of the range.
+function isInBacteria(point, r1, r2, theta1, theta2)
+{
+    var r = point[0];
+    var t = 180 * point[1] / Math.PI; // degrees
+    console.log(r, t, r1, r2, theta1, theta2);
+    return (r >= r1 && r <= r2) && (t >= theta1 && t <= theta2);
 }
