@@ -63,14 +63,12 @@ window.onload = function init()
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
     //	Load shaders and initialize attribute buffers
-
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
     // Allocate VBOs in GPU and set Attributes to point to VBOs
 
     // vertex coordinates
-
     vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexBufferSize, gl.STATIC_DRAW);
@@ -80,7 +78,6 @@ window.onload = function init()
     gl.enableVertexAttribArray(vPosition);
 
     // vertex color
-
     colorBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, colorBufferSize, gl.STATIC_DRAW);
@@ -90,7 +87,6 @@ window.onload = function init()
     gl.enableVertexAttribArray(vColor);
 
     // element indices
-
     indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexBufferSize, gl.STATIC_DRAW);
@@ -98,7 +94,6 @@ window.onload = function init()
     //
     //	Initialize our data for the disk and bacteria
     //
-
     initObjData();
 
     updateGLBuffers();
@@ -113,30 +108,49 @@ function initObjData()
     indices = genGlobalIndice();
     colors = genGlobalColorBuffer();
     clearGlobalColorBuffer();
-    colors = setObjColor(colors, diskIndice, baseColors, diskColorIndex);
-    for (var i = 0; i < maxNumBact; i++) {
-	var theta = getRandomInt(0, 360);
-	var color = rd_rem(i, 5) + 1;
-	bacteriaList[i] = new Bacteria(theta, 1, color); 
-	setObjColor(colors, bacteriaList[i].getIndice(),
-		    baseColors, bacteriaList[i].color);
-    }
+    colors = setObjColor(diskIndice, baseColors, diskColorIndex);
+    var sector = 360 / maxNumBact;
+    var theta = getRandomInt(0, 1 * sector);
+    console.log(theta);
+    var color = rd_rem(0, 5) + 1;
+    bacteriaList[0] = new Bacteria(theta, 1, color);
+    colors = setObjColor(bacteriaList[0].getIndice(),
+			 baseColors, bacteriaList[0].color);
     intervalId = window.setInterval(updateGame, 150);
 }
 
 function updateGame()
 {
     bGameTicks++;
-    if (bGameTicks > 15) {
+    if (bGameTicks > 200) {
 	window.clearInterval(intervalId);
 	bGameTicks = 1;
 	return;
     }
+    clearGlobalColorBuffer();
+    colors = setObjColor(diskIndice, baseColors, diskColorIndex);
     for (var i = 0; i < bacteriaList.length; i++) {
-	var newdt = bacteriaList[i].dt + 1;
-	bacteriaList[i].update(bacteriaList[i].t, newdt);
-	setObjColor(colors, bacteriaList[i].getIndice(),
-		    baseColors, bacteriaList[i].color);
+	var olddt = bacteriaList[i].dt;
+	if (olddt < 15) {
+	    var newdt = bacteriaList[i].dt + 1;
+	    bacteriaList[i].update(bacteriaList[i].t, newdt);
+	}
+	colors = setObjColor(bacteriaList[i].getIndice(),
+			     baseColors, bacteriaList[i].color);
+    }
+    if (bGameTicks == 20 || bGameTicks == 40 || bGameTicks == 60 ||
+	bGameTicks == 80 || bGameTicks == 100) {
+	// add a new bacteria
+	var n = bacteriaList.length;
+	if (n < maxNumBact) {
+	    var sector = 360 / maxNumBact;
+	    var theta = getRandomInt(n * sector, (n+1) * sector);
+	    console.log(theta);
+	    var color = rd_rem(n, 5) + 1;
+	    bacteriaList[n] = new Bacteria(theta, 1, color);
+	    colors = setObjColor(bacteriaList[n].getIndice(),
+				 baseColors, bacteriaList[n].color);
+	}
     }
     updateGLBuffers();
 }
@@ -229,7 +243,6 @@ function genDiskTriangles(thetaList, vertices)
 	p.push(originIndex);
 	p.push(j);		// 3*i
 	p.push(j+3);		// 3*(i+1)
-
     }
     p.push(originIndex);
     p.push(3 * i);
@@ -279,12 +292,12 @@ function genBacteriaTriangles(ts)
     return p;
 }
 
-function setObjColor(inout_colors, vertexIndice, baseColors, colorIndex)
+function setObjColor(vertexIndice, baseColors, colorIndex)
 {
     vertexIndice.forEach(function(item, i, array) {
-	inout_colors[item] = baseColors[colorIndex];
+	colors[item] = baseColors[colorIndex];
     });
-    return inout_colors;
+    return colors;
 }
 
 function assert(condition, message)
