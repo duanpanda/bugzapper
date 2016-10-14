@@ -37,8 +37,10 @@ var rCrustOuter = 0.8;
 var diskColorIndex = 7;
 
 // game controls
-var bGameTicks = 1;
-var maxNumBact = 5;
+var gameTicks = 1;
+var maxNumBact = 10;
+var maxDt = 15;
+var interval = 10;
 
 // game objects
 var diskObj = null;
@@ -121,25 +123,24 @@ function initObjData()
 
 function updateGame()
 {
-    bGameTicks++;
-    if (bGameTicks > 200) {
-	window.clearInterval(intervalId);
-	bGameTicks = 1;
-	return;
-    }
+    gameTicks++;
+    // if (gameTicks > 10000) {
+    // 	window.clearInterval(intervalId);
+    // 	gameTicks = 1;
+    // 	return;
+    // }
     clearGlobalColorBuffer();
     colors = setObjColor(diskIndice, baseColors, diskColorIndex);
     for (var i = 0; i < bacteriaList.length; i++) {
 	var olddt = bacteriaList[i].dt;
-	if (olddt < 15) {
+	if (olddt < maxDt) {
 	    var newdt = bacteriaList[i].dt + 1;
 	    bacteriaList[i].update(bacteriaList[i].t, newdt);
 	}
 	colors = setObjColor(bacteriaList[i].getIndice(),
 			     baseColors, bacteriaList[i].color);
     }
-    if (bGameTicks == 20 || bGameTicks == 40 || bGameTicks == 60 ||
-	bGameTicks == 80 || bGameTicks == 100) {
+    if (gameTicks % interval == 0) {
 	// add a new bacteria
 	var n = bacteriaList.length;
 	if (n < maxNumBact) {
