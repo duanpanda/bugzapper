@@ -31,15 +31,14 @@ var indices = [];
 var colors = [];
 
 // attributes that configure the game and the game objects
-var intension = 0;		// now only 0 works
 var rDisk = 0.7;
 var rCrustInner = rDisk;
 var rCrustOuter = 0.8;
 var diskColorIndex = 7;
-var bacteriaColorIndex = 8;
 
 // game controls
 var bGameTicks = 1;
+var maxNumBact = 5;
 
 // game objects
 var diskObj = null;
@@ -109,26 +108,26 @@ window.onload = function init()
 
 function initObjData()
 {
-    thetaList = genGlobalThetaList(intension);
+    thetaList = genGlobalThetaList();
     vertices = genGlobalVertices(thetaList, rDisk, rCrustInner, rCrustOuter);
     indices = genGlobalIndice();
     colors = genGlobalColorBuffer();
     clearGlobalColorBuffer();
-    colors = setDiskColor(colors, diskIndice, baseColors, diskColorIndex);
-    colors = setBacteriaColor(colors, bacteriaIndice, baseColors, bacteriaColorIndex);
-    for (var i = 0; i < 1; i++) {
-	// bacteriaList[i] = new Bacteria(getRandomInt(0, 360), 1);
-	bacteriaList[i] = new Bacteria(10, 15);
-	console.log(bacteriaList[i]);
-	console.log(bacteriaList[i].getIndiceList());
+    colors = setObjColor(colors, diskIndice, baseColors, diskColorIndex);
+    for (var i = 0; i < maxNumBact; i++) {
+	var theta = getRandomInt(0, 360);
+	var color = rd_rem(i, 5) + 1;
+	bacteriaList[i] = new Bacteria(theta, 1, color); 
+	setObjColor(colors, bacteriaList[i].getIndice(),
+		    baseColors, bacteriaList[i].color);
     }
-    // intervalId = window.setInterval(updateGame, 150);
+    intervalId = window.setInterval(updateGame, 150);
 }
 
 function updateGame()
 {
     bGameTicks++;
-    if (bGameTicks > 16) {
+    if (bGameTicks > 15) {
 	window.clearInterval(intervalId);
 	bGameTicks = 1;
 	return;
@@ -136,7 +135,10 @@ function updateGame()
     for (var i = 0; i < bacteriaList.length; i++) {
 	var newdt = bacteriaList[i].dt + 1;
 	bacteriaList[i].update(bacteriaList[i].t, newdt);
+	setObjColor(colors, bacteriaList[i].getIndice(),
+		    baseColors, bacteriaList[i].color);
     }
+    updateGLBuffers();
 }
 
 function updateGLBuffers()
@@ -161,22 +163,14 @@ function render()
 /**
  * Generate a theta list that maps to all the vertices.
  * In Degrees.
- *
- * intension := 0 or 1 or 2
- * If intension == 0, generate 360 angles, which is 360 thetas.
- * If intension == 1, generate 360 / 2 = 180 angles, which is 180 thetas.
- * If intension == 2, generate 360 / 2 / 2 = 90 angles, which is 90 thetas.
  */
-function genGlobalThetaList(intension)
+function genGlobalThetaList()
 {
     var t = [];
-    var table = [{n:360, d:1}, {n:180, d:2}, {n:90, d:4}];
-    var n = table[intension].n;
-    var d = table[intension].d;	// delta in radians
+    var d = 1;
     for (var i = 0; i < 360; i = i + d) {
 	t.push(i);
     }
-    assert(t.length == n, 't.length:' + t.length + ' must == n:' + n);
     return t;
 }
 
@@ -232,9 +226,6 @@ function genDiskTriangles(thetaList, vertices)
     var originIndex = vertices.length - 1;
     for (var i = 0; i < thetaList.length - 1; i++) {
 	var j = 3 * i;
-	// p.push(vec3(originIndex,
-	// 	    j,		// 3*i
-	// 	    j+3));	// 3*(i+1)
 	p.push(originIndex);
 	p.push(j);		// 3*i
 	p.push(j+3);		// 3*(i+1)
@@ -243,9 +234,6 @@ function genDiskTriangles(thetaList, vertices)
     p.push(originIndex);
     p.push(3 * i);
     p.push(0);
-    // p.push(vec3(originIndex,
-    // 		3 * i,
-    // 		0));
     return p;
 }
 
@@ -270,37 +258,6 @@ function getThetaIndexPair(t1, t2)
 }
 
 /**
- * Return an theta index list.
- * The input are indices that reference the elements of global thetaList.
- *
- * post: the length of the returned list must be an odd number.
- */
-function genBactThetaIndexList(begin, end)
-{
-    var lst = [];
-    // 'begin' can be larger than 'end'.
-    var i = begin;
-    if (begin < end) {
-	for (i = begin; i <= end; i++) {
-	    lst.push(i);
-	}
-    }
-    else if (begin > end) {
-	for (i = begin; i < 360; i++) {
-	    lst.push(i);
-	}
-	for (i = 0; i <= end; i++) {
-	    lst.push(i);
-	}
-    }
-    else if (begin == end) {
-	lst.push(begin);
-    }
-    assert(lst.length % 2 == 1, 'lst.length:' + lst.length + ' must be an odd number');
-    return lst;
-}
-
-/**
  * Return an index list.  The index references the elements in vertex list.
  * ts is a theta index list that references the global theta list.
  */
@@ -318,23 +275,11 @@ function genBacteriaTriangles(ts)
 	p.push(a); p.push(c); p.push(d);
 	p.push(c); p.push(f); p.push(d);
 	p.push(c); p.push(e); p.push(f);
-	// p.push(vec3(a, d, b));
-	// p.push(vec3(a, c, d));
-	// p.push(vec3(c, f, d));
-	// p.push(vec3(c, e, f));
     }
     return p;
 }
 
-function setDiskColor(inout_colors, vertexIndice, baseColors, colorIndex)
-{
-    vertexIndice.forEach(function(item, i, array) {
-	inout_colors[item] = baseColors[colorIndex];
-    });
-    return inout_colors;
-}
-
-function setBacteriaColor(inout_colors, vertexIndice, baseColors, colorIndex)
+function setObjColor(inout_colors, vertexIndice, baseColors, colorIndex)
 {
     vertexIndice.forEach(function(item, i, array) {
 	inout_colors[item] = baseColors[colorIndex];
@@ -379,7 +324,7 @@ function GameObj(indexBegin, indexEnd)
 }
 
 // pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
-function Bacteria(t, dt)
+function Bacteria(t, dt, color)
 {
     assert(t >= 0 && t <= 359, 'must: 0 <= t <= 359');
     assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
@@ -389,6 +334,7 @@ function Bacteria(t, dt)
     GameObj.call(0, 0);
     this.t = t;
     this.dt = dt;
+    this.color = color;
 
     this.update = function(t, dt) {
 	this.t = t;
@@ -410,22 +356,18 @@ function Bacteria(t, dt)
 
     this.update(t, dt);
 
-    this.getIndiceList = function() {
+    this.getIndice = function() {
 	var a = this.vIndexBegin;
 	var b = this.vIndexEnd;
 	var indexRanges = rd_gen_ranges([a, b], bacteriaIndice.length / 3);
 	var indiceList = [];
 	indexRanges.forEach(function(range, index, array) {
-	    indiceList.push(indices.slice(range[0] * 3 + thetaList.length * 3,
-					  range[1] * 3 + thetaList.length * 3));
+	    var begin = (range[0] + thetaList.length) * 3;
+	    var end = (range[1] + thetaList.length) * 3;
+	    indiceList = indiceList.concat(indices.slice(begin, end));
 	});
 	return indiceList;
     };
-}
-
-function addBacteria(obj)
-{
-    bacteriaList.push(obj);
 }
 
 /**
