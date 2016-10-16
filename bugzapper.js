@@ -102,7 +102,7 @@ window.onload = function init()
 	}
     });
 
-    intervalId = window.setInterval(updateGame, 150);
+    intervalId = window.setInterval(updateGame, 80);
 
     render();
 };
@@ -254,6 +254,8 @@ function Bacteria(t, dt, color)
     this.dt = dt;
     this.drawMode = gl.TRIANGLE_STRIP;
     this.isPoisoned = false;
+    this.poisonDt = 0;		// this.poisonDt can grow from 0 to this.dt
+    this.visualParts = [[this.beginIndex, this.beginIndex + this.vCount]];
 
     this._genPoints = function() {
 	var thetaCount = maxDt * 2 + 1;
@@ -273,12 +275,13 @@ function Bacteria(t, dt, color)
 
     this._genPoints();
 
-    this._setVisualPart = function(dt) {
+    this._setVisiblePart = function(dt) {
 	this.dt = dt;		// 1 degree offset ~ 2 vertices offset
-	var numVertices = Math.floor(this.vertices.length / 2);
-	var middleIndex = Math.floor(numVertices / 2) * 2;
+	var numThetas = Math.floor(this.vertices.length / 2);
+	var middleIndex = Math.floor(numThetas / 2) * 2;
 	this.beginIndex = middleIndex - dt * 2;
 	this.vCount = (2 * dt + 1) * 2;
+	this.visualParts = [[this.beginIndex, this.beginIndex + this.vCount]];
 
 	var t = this.theta;
 	var rangePair = rd_pair_rem([t - dt, t + dt], 360);
@@ -298,36 +301,65 @@ function Bacteria(t, dt, color)
 
     this.setTheta = function(t) {
 	this.theta = t;
-	// visual part depends on this.theta, so update it to keep the internal
+	// visible part depends on this.theta, so update it to keep the internal
 	// states consistent
-	this._setVisualPart(this.dt);
+	this._setVisiblePart(this.dt);
     };
 
     this.setColor(color);
-    this._setVisualPart(dt);
+    this._setVisiblePart(dt);
 
     this.update = function() {
-	if (!this.isPoisoned) {
-	    var olddt = this.dt;
-	    var newdt = olddt + 1;
-	    if (newdt <= maxDt) {
-		this._setVisualPart(newdt);
-	    }
+	var olddt = this.dt;
+	var newdt = olddt + 1;
+	if (newdt <= maxDt) {
+	    this._setVisiblePart(newdt);
 	}
-	else {
-	    olddt = this.dt;
-	    newdt = olddt - 1;
-	    if (newdt > 0) {
-		this._setVisualPart(newdt);
+
+	if (this.isPoisoned) {
+	    olddt = this.poisonDt;
+	    newdt = olddt + 1;
+	    if (newdt < this.dt) {
+		this._setPoisonedVisibleParts(newdt);
 	    }
-	    else if (newdt == 0) {
+	    else if (newdt == this.dt) {
 		this.isActive = false;
+		this.isPoisoned = false;
 	    }
 	}
     };
 
     this.poisonIt = function() {
 	this.isPoisoned = true;
+    };
+
+    // must be called after calling _setVisiblePart()
+    this._setPoisonedVisibleParts = function(poisonDt) {
+	this.poisonDt = poisonDt; // 1 degree offset ~ 2 vertices offset
+	var numThetas = Math.floor(this.vertices.length / 2);
+	var middleThetaIndex = Math.floor(numThetas / 2);
+	var a = middleThetaIndex - poisonDt;
+	var b = middleThetaIndex + poisonDt;
+	var endThetaIndex = middleThetaIndex + this.dt;
+	var av = this._thetaIndex_to_vIndex(a);
+	var bv = this._thetaIndex_to_vIndex(b);
+	var endVIndex = this._thetaIndex_to_vIndex(endThetaIndex);
+	this.visualParts[0] = [this.beginIndex, av];
+	this.visualParts[1] = [bv, endVIndex];
+    };
+
+    this.redraw = function(gl_vIndex) {
+	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
+	for (var i = 0; i < this.visualParts.length; i++) {
+	    gl.drawArrays(this.drawMode, gl_vIndex + this.visualParts[i][0],
+			  this.visualParts[i][1] - this.visualParts[i][0]);
+	}
+    };
+
+    // input value range (closed range, degrees):
+    //     [0, numThetas in this bacteria]
+    this._thetaIndex_to_vIndex = function(i) {
+	return 2 * i;
     };
 }
 
