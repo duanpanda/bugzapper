@@ -1,7 +1,6 @@
 var canvas;
 var gl;
 var program;
-
 var vBuf = null;
 var cBuf = null;
 
@@ -21,10 +20,11 @@ var maxNumTriangles = 5000;
 var maxNumVertices = 3 * maxNumTriangles;
 const BYTES_PER_VERTEX = Float32Array.BYTES_PER_ELEMENT * 2;
 const BYTES_PER_VERTEX_COLOR = Float32Array.BYTES_PER_ELEMENT * 3;
+const RADIAN_TO_DEGREE = 180 / Math.PI;
+const DEGREE_TO_RADIAN = Math.PI / 180;
 var vertexBufferSize = BYTES_PER_VERTEX * maxNumVertices;
 var colorBufferSize = vertexBufferSize;
-// vertex index in GL vertex buffer, count and reference vertices
-var vIndex = 0;
+var vIndex = 0;			// vertex index of GL vertex buffer
 var thetaLoc;
 
 // attributes that configure the game and the game objects
@@ -41,6 +41,7 @@ var intervalId = 0;
 
 // game objects
 var objs = [];
+var bactBegin = 1;		// index of objs for the first bacteria obj
 
 window.onload = function init()
 {
@@ -81,17 +82,26 @@ window.onload = function init()
     canvas.addEventListener("mousedown", function(event) {
 	var x = event.clientX;
 	var y = event.clientY;
-	console.log('xy:', x, y);
+	// console.log('xy:', x, y);
 	var glx = 2 * x / canvas.width - 1;
 	var gly = 2 * (canvas.height - y) / canvas.height - 1;
-	console.log('gl_xy:', glx, gly);
+	// console.log('gl_xy:', glx, gly);
 	var polar = xy_to_polar(glx, gly);
-	console.log('polar:', polar[0], polar[1]);
-	for (var i = 0; i < bacteriaList.length; i++) {
-	    var theta1 = bacteriaList[i].thetaBegin;
-	    var theta2 = bacteriaList[i].thetaEnd;
+	// console.log('polar:', polar[0], polar[1]);
+	var isFound = false;
+	for (var i = bactBegin + maxNumBact - 1; i >= bactBegin; i--) {
+	    if (!objs[i].isActive) {
+		continue;
+	    }
+	    var theta1 = objs[i].thetaBegin;
+	    var theta2 = objs[i].thetaEnd;
 	    if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
-		console.log('mouse in', i+'th', 'bacteria');
+		// console.log(polar[0], polar[1] * RADIAN_TO_DEGREE, rCrustInner, rCrustOuter, theta1, theta2);
+		// console.log('mouse in', i+'th', 'bacteria');
+		if (!isFound) {
+		    isFound = true;
+		    objs[i].isActive = false;
+		}
 	    }
 	}
     });
@@ -107,7 +117,9 @@ function initObjData()
     objs.push(disk);
 
     for (var i = 0; i < maxNumBact; i++) {
-	var b = new Bacteria(getRandomInt(0, 360), 1, baseColors[getRandomInt(1, 6)]);
+	var b = new Bacteria(getRandomInt(0, 360),
+			     1,
+			     baseColors[getRandomInt(1, 6)]);
 	objs.push(b);
     }
 
@@ -139,10 +151,13 @@ function updateGame()
 	return;
     }
     for (var i = 1; i <= maxNumBact; i++) {
+	if (!objs[i].isActive) {
+	    continue;
+	}
 	var olddt = objs[i].dt;
 	var newdt = olddt + 1;
 	if (newdt <= maxDt) {
-	    objs[i].setVisualSize(newdt);
+	    objs[i].setVisualPart(newdt);
 	}
     }
 }
@@ -152,7 +167,9 @@ function render()
     gl.clear(gl.COLOR_BUFFER_BIT);
     var vIndex = 0;      // vertex index in vertex buffer and color buffer
     for (var i = 0; i < objs.length; i++) {
-	objs[i].redraw(vIndex);
+	if (objs[i].isActive) {
+	    objs[i].redraw(vIndex);
+	}
 	vIndex += objs[i].vertices.length;
     }
     window.requestAnimFrame(render);
@@ -195,11 +212,12 @@ function GameObj()
     };
     this.theta = 0.0;
     this.redraw = function(gl_vIndex) {
-	gl.uniform1f(thetaLoc, this.theta);
+	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
 	gl.drawArrays(this.drawMode, gl_vIndex + this.beginIndex, this.vCount);
     };
     this.beginIndex = 0;
     this.vCount = this.vertices.length;
+    this.isActive = true;
 }
 
 function Disk(x, y, r, c)
@@ -216,7 +234,7 @@ function Disk(x, y, r, c)
 	}
 	this.vertices[0] = vec2(x, y);
 	for (var i = 0; i < 360; i++) {
-	    var t = i / 180 * Math.PI;
+	    var t = i * DEGREE_TO_RADIAN;
 	    var nx = x + r * Math.cos(t);
 	    var ny = y + r * Math.sin(t);
 	    this.vertices[i+1] = vec2(nx, ny);
@@ -239,15 +257,18 @@ function Bacteria(t, dt, color)
 
     GameObj.call(this);
     this.theta = t;
+    this.thetaBegin = t;	// value range: [-359, 359]
+    this.thetaEnd = t;		// value range: [-359, 359]
     this.dt = dt;
     this.drawMode = gl.TRIANGLE_STRIP;
 
-    this.genPoints = function() {
-	if (this.vertices.length != 31 * 2) {
-	    this.vertices = new Array(31 * 2);
+    this._genPoints = function() {
+	var thetaCount = maxDt * 2 + 1;
+	if (this.vertices.length != thetaCount) {
+	    this.vertices = new Array(thetaCount * 2);
 	}
 	for (var t = -maxDt, i = 0; t <= maxDt; t++, i += 2) {
-	    var tr = t * Math.PI / 180; // degrees to radians
+	    var tr = t * DEGREE_TO_RADIAN;
 	    var p1x = rCrustInner * Math.cos(tr);
 	    var p1y = rCrustInner * Math.sin(tr);
 	    var p2x = rCrustOuter * Math.cos(tr);
@@ -257,14 +278,19 @@ function Bacteria(t, dt, color)
 	}
     };
 
-    this.genPoints();
+    this._genPoints();
 
-    this.setVisualSize = function(dt) {
+    this.setVisualPart = function(dt) {
 	this.dt = dt;		// 1 degree offset ~ 2 vertices offset
 	var numVertices = Math.floor(this.vertices.length / 2);
 	var middleIndex = Math.floor(numVertices / 2) * 2;
 	this.beginIndex = middleIndex - dt * 2;
 	this.vCount = (2 * dt + 1) * 2;
+
+	var t = this.theta;
+	var rangePair = rd_pair_rem([t - dt, t + dt], 360);
+	this.thetaBegin = rangePair[0];
+	this.thetaEnd = rangePair[1];
     };
 
     this.setColor = function(c) {
@@ -277,8 +303,15 @@ function Bacteria(t, dt, color)
 	}
     };
 
+    this.setTheta = function(t) {
+	this.theta = t;
+	// visual part depends on this.theta, so update it to keep the internal
+	// states consistent
+	this.setVisualPart(this.dt);
+    };
+
     this.setColor(color);
-    this.setVisualSize(dt);
+    this.setVisualPart(dt);
 }
 
 /**
@@ -306,25 +339,22 @@ function rd_pair_rem(pair, divisor)
     return [a, b];
 }
 
+// return at most 2 ranges.
+// Example 1: pair = [15, 359], divisor = 360, return [[15, 359]].
+// Example 2: pair = [340, 25], divisor = 360, return [[340, 360], [0, 2]].
 function rd_gen_ranges(pair, divisor)
 {
     var a = pair[0];
     var b = pair[1];
-    var lst = [];
-    var i = a;
-    if (a < b) {
-	lst.push(pair);
+    if (a <= b) {
+	return [[a, b]];
     }
     else if (a > b) {
-	lst.push([a, divisor]);
-	lst.push([0, b]);
+	return [[a, divisor], [0, b]];
     }
-    else if (a == b) {
-	lst.push(pair);
-    }
-    return lst;
 }
 
+// Output: r >= 0, theta is in a closed range [0, 2*PI].
 function xy_to_polar(x, y)
 {
     var theta = Math.atan(y / x);
@@ -338,14 +368,27 @@ function xy_to_polar(x, y)
     return [r, theta];
 }
 
-// theta1 and theta2 are in degrees
+// theta1 and theta2 are in degrees that is in the closed range [0, 359]
 // pre: r1 <= r2
 // pre: no matter who is larger, theta1 is the beginning of the range, theta2
 //      is the end of the range.
 function isInBacteria(point, r1, r2, theta1, theta2)
 {
     var r = point[0];
-    var t = 180 * point[1] / Math.PI; // degrees
-    console.log(r, t, r1, r2, theta1, theta2);
-    return (r >= r1 && r <= r2) && (t >= theta1 && t <= theta2);
+    var t = point[1] * RADIAN_TO_DEGREE;
+    return (r >= r1 && r <= r2) && isInRange(t, theta1, theta2);
+}
+
+// begin >= end is valid
+// begin < end is also valid
+function isInRange(a, begin, end)
+{
+    if (begin <= end) {
+	return a >= begin && a <= end;
+    }
+    else {
+	var ranges = rd_gen_ranges([begin, end], 360);
+	return a >= ranges[0][0] && a <= ranges[0][1] ||
+	    a >= ranges[1][0] && a <= ranges[1][1];
+    }
 }
