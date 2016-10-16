@@ -104,12 +104,13 @@ window.onload = function init()
 function initObjData()
 {
     var disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
-    console.log(disk);
     objs.push(disk);
+
     for (var i = 0; i < maxNumBact; i++) {
 	var b = new Bacteria(getRandomInt(0, 360), 1, baseColors[getRandomInt(1, 6)]);
 	objs.push(b);
     }
+
     vIndex = 0;
     for (var j = 0; j < objs.length; j++) {
 	addGLObj(objs[j]);
@@ -136,6 +137,13 @@ function updateGame()
 	window.clearInterval(intervalId);
 	gameTicks = 1;
 	return;
+    }
+    for (var i = 1; i <= maxNumBact; i++) {
+	var olddt = objs[i].dt;
+	var newdt = olddt + 1;
+	if (newdt <= maxDt) {
+	    objs[i].setVisualSize(newdt);
+	}
     }
 }
 
