@@ -107,7 +107,7 @@ function initObjData()
     console.log(disk);
     objs.push(disk);
     for (var i = 0; i < maxNumBact; i++) {
-	var b = new Bacteria(getRandomInt(0, 360), maxDt, baseColors[getRandomInt(1, 6)]);
+	var b = new Bacteria(getRandomInt(0, 360), 1, baseColors[getRandomInt(1, 6)]);
 	objs.push(b);
     }
     vIndex = 0;
@@ -144,8 +144,7 @@ function render()
     gl.clear(gl.COLOR_BUFFER_BIT);
     var vIndex = 0;      // vertex index in vertex buffer and color buffer
     for (var i = 0; i < objs.length; i++) {
-	gl.uniform1f(thetaLoc, objs[i].theta);
-	gl.drawArrays(objs[i].drawMode, vIndex, objs[i].vertices.length);
+	objs[i].redraw(vIndex);
 	vIndex += objs[i].vertices.length;
     }
     window.requestAnimFrame(render);
@@ -187,6 +186,12 @@ function GameObj()
 	}
     };
     this.theta = 0.0;
+    this.redraw = function(gl_vIndex) {
+	gl.uniform1f(thetaLoc, this.theta);
+	gl.drawArrays(this.drawMode, gl_vIndex + this.beginIndex, this.vCount);
+    };
+    this.beginIndex = 0;
+    this.vCount = this.vertices.length;
 }
 
 function Disk(x, y, r, c)
@@ -213,6 +218,7 @@ function Disk(x, y, r, c)
 
     this.genCirclePoints();
     this.setColor(c);
+    this.vCount = this.vertices.length;
 }
 
 // pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
@@ -245,12 +251,12 @@ function Bacteria(t, dt, color)
 
     this.genPoints();
 
-    this.rotate = function(t) {
-	this.t = t;
-    };
-
-    this.grow = function(dt) {
-	// grow this.dt to dt, and update visible buffer section
+    this.setVisualSize = function(dt) {
+	this.dt = dt;		// 1 degree offset ~ 2 vertices offset
+	var numVertices = Math.floor(this.vertices.length / 2);
+	var middleIndex = Math.floor(numVertices / 2) * 2;
+	this.beginIndex = middleIndex - dt * 2;
+	this.vCount = (2 * dt + 1) * 2;
     };
 
     this.setColor = function(c) {
@@ -263,8 +269,8 @@ function Bacteria(t, dt, color)
 	}
     };
 
-    this.rotate(t, dt);
     this.setColor(color);
+    this.setVisualSize(dt);
 }
 
 /**
