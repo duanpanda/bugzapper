@@ -82,12 +82,9 @@ window.onload = function init()
     canvas.addEventListener("mousedown", function(event) {
 	var x = event.clientX;
 	var y = event.clientY;
-	// console.log('xy:', x, y);
 	var glx = 2 * x / canvas.width - 1;
 	var gly = 2 * (canvas.height - y) / canvas.height - 1;
-	// console.log('gl_xy:', glx, gly);
 	var polar = xy_to_polar(glx, gly);
-	// console.log('polar:', polar[0], polar[1]);
 	var isFound = false;
 	for (var i = bactBegin + maxNumBact - 1; i >= bactBegin; i--) {
 	    if (!objs[i].isActive) {
@@ -96,11 +93,10 @@ window.onload = function init()
 	    var theta1 = objs[i].thetaBegin;
 	    var theta2 = objs[i].thetaEnd;
 	    if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
-		// console.log(polar[0], polar[1] * RADIAN_TO_DEGREE, rCrustInner, rCrustOuter, theta1, theta2);
-		// console.log('mouse in', i+'th', 'bacteria');
 		if (!isFound) {
 		    isFound = true;
-		    objs[i].isActive = false;
+		    objs[i].poisonIt();
+		    break;
 		}
 	    }
 	}
@@ -150,15 +146,11 @@ function updateGame()
 	gameTicks = 1;
 	return;
     }
-    for (var i = 1; i <= maxNumBact; i++) {
+    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (!objs[i].isActive) {
 	    continue;
 	}
-	var olddt = objs[i].dt;
-	var newdt = olddt + 1;
-	if (newdt <= maxDt) {
-	    objs[i].setVisualPart(newdt);
-	}
+	objs[i].update();
     }
 }
 
@@ -261,6 +253,7 @@ function Bacteria(t, dt, color)
     this.thetaEnd = t;		// value range: [-359, 359]
     this.dt = dt;
     this.drawMode = gl.TRIANGLE_STRIP;
+    this.isPoisoned = false;
 
     this._genPoints = function() {
 	var thetaCount = maxDt * 2 + 1;
@@ -280,7 +273,7 @@ function Bacteria(t, dt, color)
 
     this._genPoints();
 
-    this.setVisualPart = function(dt) {
+    this._setVisualPart = function(dt) {
 	this.dt = dt;		// 1 degree offset ~ 2 vertices offset
 	var numVertices = Math.floor(this.vertices.length / 2);
 	var middleIndex = Math.floor(numVertices / 2) * 2;
@@ -307,11 +300,35 @@ function Bacteria(t, dt, color)
 	this.theta = t;
 	// visual part depends on this.theta, so update it to keep the internal
 	// states consistent
-	this.setVisualPart(this.dt);
+	this._setVisualPart(this.dt);
     };
 
     this.setColor(color);
-    this.setVisualPart(dt);
+    this._setVisualPart(dt);
+
+    this.update = function() {
+	if (!this.isPoisoned) {
+	    var olddt = this.dt;
+	    var newdt = olddt + 1;
+	    if (newdt <= maxDt) {
+		this._setVisualPart(newdt);
+	    }
+	}
+	else {
+	    olddt = this.dt;
+	    newdt = olddt - 1;
+	    if (newdt > 0) {
+		this._setVisualPart(newdt);
+	    }
+	    else if (newdt == 0) {
+		this.isActive = false;
+	    }
+	}
+    };
+
+    this.poisonIt = function() {
+	this.isPoisoned = true;
+    };
 }
 
 /**
