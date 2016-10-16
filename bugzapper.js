@@ -115,7 +115,7 @@ function initObjData()
     for (var i = 0; i < maxNumBact; i++) {
 	var b = new Bacteria(getRandomInt(0, 360),
 			     1,
-			     baseColors[getRandomInt(1, 6)]);
+			     getRandomColor());
 	objs.push(b);
     }
 
@@ -275,6 +275,12 @@ function Bacteria(t, dt, color)
 
     this._genPoints();
 
+    // input value range (closed range, degrees):
+    //     [0, numThetas in this bacteria]
+    this._thetaIndex_to_vIndex = function(i) {
+	return 2 * i;
+    };
+
     this._setVisiblePart = function(dt) {
 	this.dt = dt;		// 1 degree offset ~ 2 vertices offset
 	var numThetas = Math.floor(this.vertices.length / 2);
@@ -355,12 +361,6 @@ function Bacteria(t, dt, color)
 			  this.visualParts[i][1] - this.visualParts[i][0]);
 	}
     };
-
-    // input value range (closed range, degrees):
-    //     [0, numThetas in this bacteria]
-    this._thetaIndex_to_vIndex = function(i) {
-	return 2 * i;
-    };
 }
 
 /**
@@ -440,4 +440,14 @@ function isInRange(a, begin, end)
 	return a >= ranges[0][0] && a <= ranges[0][1] ||
 	    a >= ranges[1][0] && a <= ranges[1][1];
     }
+}
+
+function getRandomColor() {
+    // var i = getRandomInt(1, 7);
+    // var j = getRandomInt(1, 7);
+    // var a = baseColors[i];
+    // var b = baseColors[j];
+    // var c = mix(a, b, Math.random());
+    // return c;
+    return vec3(Math.random(), Math.random(), Math.random());
 }
