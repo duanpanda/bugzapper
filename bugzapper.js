@@ -25,6 +25,7 @@ var vertexBufferSize = BYTES_PER_VERTEX * maxNumVertices;
 var colorBufferSize = vertexBufferSize;
 // vertex index in GL vertex buffer, count and reference vertices
 var vIndex = 0;
+var thetaLoc;
 
 // attributes that configure the game and the game objects
 var rDisk = 0.7;
@@ -59,6 +60,8 @@ window.onload = function init()
 
     var vColor = gl.getAttribLocation(program, "vColor");
     gl.enableVertexAttribArray(vColor);
+
+    thetaLoc = gl.getUniformLocation(program, "theta");
 
     vBuf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
@@ -104,7 +107,7 @@ function initObjData()
     console.log(disk);
     objs.push(disk);
     for (var i = 0; i < maxNumBact; i++) {
-	var b = new Bacteria(0, 30, baseColors[8]);
+	var b = new Bacteria(getRandomInt(0, 360), maxDt, baseColors[getRandomInt(1, 6)]);
 	objs.push(b);
     }
     vIndex = 0;
@@ -141,6 +144,7 @@ function render()
     gl.clear(gl.COLOR_BUFFER_BIT);
     var vIndex = 0;      // vertex index in vertex buffer and color buffer
     for (var i = 0; i < objs.length; i++) {
+	gl.uniform1f(thetaLoc, objs[i].theta);
 	gl.drawArrays(objs[i].drawMode, vIndex, objs[i].vertices.length);
 	vIndex += objs[i].vertices.length;
     }
@@ -182,6 +186,7 @@ function GameObj()
 	    this.colors[i] = c;
 	}
     };
+    this.theta = 0.0;
 }
 
 function Disk(x, y, r, c)
@@ -219,7 +224,7 @@ function Bacteria(t, dt, color)
     assert((typeof dt === 'number') && Math.floor(dt) === dt, 'must: dt is integer');
 
     GameObj.call(this);
-    this.t = t;
+    this.theta = t;
     this.dt = dt;
     this.drawMode = gl.TRIANGLE_STRIP;
 
