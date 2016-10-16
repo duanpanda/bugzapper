@@ -35,6 +35,7 @@ var diskColorIndex = 7;
 
 // game controls
 var gameTicks = 1;
+var nextTick = getRandomInt(1, 20); // next tick to generate a new Bacteria
 var maxNumBact = 10;
 var maxDt = 15;
 var intervalId = 0;
@@ -113,9 +114,7 @@ function initObjData()
     objs.push(disk);
 
     for (var i = 0; i < maxNumBact; i++) {
-	var b = new Bacteria(getRandomInt(0, 360),
-			     1,
-			     getRandomColor());
+	var b = new Bacteria(getRandomInt(0, 360), 1, getRandomColor());
 	objs.push(b);
     }
 
@@ -146,6 +145,14 @@ function updateGame()
 	gameTicks = 1;
 	return;
     }
+    if (gameTicks == nextTick) {
+	var b = objs[getRandomInt(1, 11)];
+	if (!b.isActive) {
+	    b.isActive = true;
+	    b.setTheta(getRandomInt(0, 360));
+	}
+	nextTick = gameTicks + getRandomInt(1, 20);
+    }
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (!objs[i].isActive) {
 	    continue;
@@ -157,12 +164,12 @@ function updateGame()
 function render()
 {
     gl.clear(gl.COLOR_BUFFER_BIT);
-    var vIndex = 0;      // vertex index in vertex buffer and color buffer
+    var vi = 0;      // vertex index in vertex buffer and color buffer
     for (var i = 0; i < objs.length; i++) {
 	if (objs[i].isActive) {
-	    objs[i].redraw(vIndex);
+	    objs[i].redraw(vi);
 	}
-	vIndex += objs[i].vertices.length;
+	vi += objs[i].vertices.length;
     }
     window.requestAnimFrame(render);
 }
@@ -253,6 +260,7 @@ function Bacteria(t, dt, color)
     this.thetaEnd = t;		// value range: [-359, 359]
     this.dt = dt;
     this.drawMode = gl.TRIANGLE_STRIP;
+    this.isActive = false;
     this.isPoisoned = false;
     this.poisonDt = 0;		// this.poisonDt can grow from 0 to this.dt
     this.visualParts = [[this.beginIndex, this.beginIndex + this.vCount]];
@@ -329,8 +337,7 @@ function Bacteria(t, dt, color)
 		this._setPoisonedVisibleParts(newdt);
 	    }
 	    else if (newdt == this.dt) {
-		this.isActive = false;
-		this.isPoisoned = false;
+		this._reset();
 	    }
 	}
     };
@@ -360,6 +367,13 @@ function Bacteria(t, dt, color)
 	    gl.drawArrays(this.drawMode, gl_vIndex + this.visualParts[i][0],
 			  this.visualParts[i][1] - this.visualParts[i][0]);
 	}
+    };
+
+    this._reset = function() {
+	this.isActive = false;
+	this.isPoisoned = false;
+	this.poisonDt = 0;
+	this.dt = 1;
     };
 }
 
