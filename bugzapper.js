@@ -42,7 +42,7 @@ var maxNumBact = 10;
 var maxDt = 15;
 var intervalId = 0;
 var delay = 80;			// game frame length in milli-seconds
-var points = 0;			// user game points;
+var score = 0;			// user game score;
 
 // game objects
 var objs = [];
@@ -104,8 +104,8 @@ window.onload = function init()
 		if (!isFound) {
 		    isFound = true;
 		    objs[i].poisonIt();
-		    points += 10;
-		    document.getElementById("points").innerHTML = points.toString();
+		    score += 10;
+		    document.getElementById("score").innerHTML = score;
 		    break;
 		}
 	    }
