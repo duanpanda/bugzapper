@@ -41,8 +41,9 @@ var nextTick =  maxInterval; // next tick to generate a new Bacteria
 var maxNumBact = 10;
 var maxDt = 15;
 var intervalId = 0;
-var delay = 80;			// game frame length in milli-seconds
+var bactTickInterval = 2;	// control the bacteria's speed of growth
 var score = 0;			// user game score;
+var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 
 // game objects
 var objs = [];
@@ -113,14 +114,12 @@ window.onload = function init()
     });
 
     var speedSlider = document.getElementById("speed-slider");
-    delay = speedSlider.valueAsNumber;
+    bactTickInterval = 11 - speedSlider.value;
     speedSlider.onchange = function(event) {
 	// Or use event.srcElemtn.value and put it with number arithmetic
 	// expression and it can be coerced from a string to an integer
 	// automatically.
-	delay = event.srcElement.valueAsNumber;
-	window.clearInterval(intervalId);
-	intervalId = window.setInterval(updateGame, delay);
+	bactTickInterval = 11 - event.srcElement.value;
     };
     var intervalSlider = document.getElementById("interval-slider");
     maxInterval = intervalSlider.valueAsNumber;
@@ -128,7 +127,7 @@ window.onload = function init()
 	maxInterval = event.srcElement.valueAsNumber;
     };
 
-    intervalId = window.setInterval(updateGame, delay);
+    intervalId = window.setInterval(updateGame, updateGameDelay);
 
     render();
 };
@@ -350,12 +349,13 @@ function Bacteria(t, dt, color)
     this._setVisiblePart(dt);
 
     this.update = function() {
-	var olddt = this.dt;
-	var newdt = olddt + 1;
-	if (newdt <= maxDt) {
-	    this._setVisiblePart(newdt);
+	if (gameTicks % bactTickInterval == 0) {
+	    var olddt = this.dt;
+	    var newdt = olddt + 1;
+	    if (newdt <= maxDt) {
+		this._setVisiblePart(newdt);
+	    }
 	}
-
 	if (this.isPoisoned) {
 	    olddt = this.poisonDt;
 	    newdt = olddt + 1;
