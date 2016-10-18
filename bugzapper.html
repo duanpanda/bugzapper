@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<link rel="stylesheet" href="bugzapper.css"/>
 <title>Super Bug Zapper</title>
 
 
@@ -48,5 +49,18 @@ main()
 <canvas id="gl-canvas" width="512" height="512">
 Oops ... your browser doesn't support the HTML5 canvas element
 </canvas>
+<div>
+Interval: 2 <input id="interval-slider" type="range"
+ min="2" max="30" step="1" value="18" />
+ 50
+</div>
+<div>
+Speed: 40 <input id="speed-slider" type="range"
+ min="40" max="150" step="10" value="80" />
+ 150
+</div>
+<div>
+  <p>Your Points: </p><p id="points">0</p>
+</div>
 </body>
 </html>

@@ -35,10 +35,14 @@ var diskColorIndex = 7;
 
 // game controls
 var gameTicks = 1;
-var nextTick = getRandomInt(1, 20); // next tick to generate a new Bacteria
+var maxInterval = 20;
+// var nextTick = getRandomInt(1, maxInterval); // next tick to generate a new Bacteria
+var nextTick =  maxInterval; // next tick to generate a new Bacteria
 var maxNumBact = 10;
 var maxDt = 15;
 var intervalId = 0;
+var delay = 80;			// game frame length in milli-seconds
+var points = 0;			// user game points;
 
 // game objects
 var objs = [];
@@ -81,8 +85,10 @@ window.onload = function init()
     initObjData();
 
     canvas.addEventListener("mousedown", function(event) {
-	var x = event.clientX;
-	var y = event.clientY;
+	var rect = canvas.getBoundingClientRect();
+	var x = event.clientX - rect.left;
+	var y = event.clientY - rect.top;
+	console.log('x, y:', x, y);
 	var glx = 2 * x / canvas.width - 1;
 	var gly = 2 * (canvas.height - y) / canvas.height - 1;
 	var polar = xy_to_polar(glx, gly);
@@ -93,17 +99,36 @@ window.onload = function init()
 	    }
 	    var theta1 = objs[i].thetaBegin;
 	    var theta2 = objs[i].thetaEnd;
+	    console.log(polar[0], polar[1]);
 	    if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
 		if (!isFound) {
 		    isFound = true;
 		    objs[i].poisonIt();
+		    points += 10;
+		    document.getElementById("points").innerHTML = points.toString();
 		    break;
 		}
 	    }
 	}
     });
 
-    intervalId = window.setInterval(updateGame, 80);
+    var speedSlider = document.getElementById("speed-slider");
+    delay = speedSlider.valueAsNumber;
+    speedSlider.onchange = function(event) {
+	// Or use event.srcElemtn.value and put it with number arithmetic
+	// expression and it can be coerced from a string to an integer
+	// automatically.
+	delay = event.srcElement.valueAsNumber;
+	window.clearInterval(intervalId);
+	intervalId = window.setInterval(updateGame, delay);
+    };
+    var intervalSlider = document.getElementById("interval-slider");
+    maxInterval = intervalSlider.valueAsNumber;
+    intervalSlider.onchange = function(event) {
+	maxInterval = event.srcElement.valueAsNumber;
+    };
+
+    intervalId = window.setInterval(updateGame, delay);
 
     render();
 };
@@ -146,12 +171,13 @@ function updateGame()
 	return;
     }
     if (gameTicks == nextTick) {
-	var b = objs[getRandomInt(1, 11)];
+	var b = objs[getRandomInt(1, maxNumBact + 1)];
 	if (!b.isActive) {
 	    b.isActive = true;
 	    b.setTheta(getRandomInt(0, 360));
 	}
-	nextTick = gameTicks + getRandomInt(1, 20);
+	// nextTick = gameTicks + getRandomInt(1, maxInterval);
+	nextTick = gameTicks + maxInterval;
     }
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (!objs[i].isActive) {
