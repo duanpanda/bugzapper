@@ -45,6 +45,7 @@ var score = 0;			// user game score;
 var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 var isWin = false;
 var isLost = false;
+var maxGrownUpsToLoseGame = 2;
 
 // game objects
 var objs = [];
@@ -86,32 +87,7 @@ window.onload = function init()
 
     initObjData();
 
-    canvas.addEventListener("mousedown", function(event) {
-	var rect = canvas.getBoundingClientRect();
-	var x = event.clientX - rect.left;
-	var y = event.clientY - rect.top;
-	console.log('x, y:', x, y);
-	var glx = 2 * x / canvas.width - 1;
-	var gly = 2 * (canvas.height - y) / canvas.height - 1;
-	var polar = xy_to_polar(glx, gly);
-	var isFound = false;
-	for (var i = bactBegin + maxNumBact - 1; i >= bactBegin; i--) {
-	    if (!objs[i].isActive) {
-		continue;
-	    }
-	    var theta1 = objs[i].thetaBegin;
-	    var theta2 = objs[i].thetaEnd;
-	    // console.log(polar[0], polar[1]);
-	    if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
-		if (!isFound) {
-		    isFound = true;
-		    objs[i].poisonIt();
-		    setScore(score + 10);
-		    break;
-		}
-	    }
-	}
-    });
+    canvas.addEventListener("mousedown", onMouseDown);;
 
     var speedSlider = document.getElementById("speed-slider");
     bactTickInterval = 11 - speedSlider.value;
@@ -134,6 +110,34 @@ window.onload = function init()
 
     render();
 };
+
+function onMouseDown(event) {
+    var rect = canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+    console.log('x, y:', x, y);
+    var glx = 2 * x / canvas.width - 1;
+    var gly = 2 * (canvas.height - y) / canvas.height - 1;
+    var polar = xy_to_polar(glx, gly);
+    var isFound = false;
+    for (var i = bactBegin + maxNumBact - 1; i >= bactBegin; i--) {
+	if (!objs[i].isActive) {
+	    continue;
+	}
+	var theta1 = objs[i].thetaBegin;
+	var theta2 = objs[i].thetaEnd;
+	// console.log(polar[0], polar[1]);
+	if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
+	    if (!isFound) {
+		isFound = true;
+		objs[i].poisonIt();
+		setScore(score + 10);
+		break;
+	    }
+	}
+    }
+}
+
 
 function initObjData()
 {
@@ -168,14 +172,18 @@ function addGLObj(obj)
 function updateGame()
 {
     gameTicks++;
-    if (gameTicks > 10000) {
-	window.clearInterval(intervalId);
-	gameTicks = 1;
-	return;
-    }
+
     if (isAllBactClear()) {
 	nextTick = 0;
 	isWin = true;
+    }
+    var numGrownUps = countGrownUps();
+    if (numGrownUps == maxGrownUpsToLoseGame) {
+	nextTick = 0;
+	isLost = true;
+	console.log('YOU LOSE');
+	endGame();
+	return;
     }
     if (gameTicks == nextTick) {
 	activateOneBact();
@@ -189,7 +197,7 @@ function updateGame()
     }
     if (isAllBactClear()) {
 	console.log('YOU WIN');
-	window.clearInterval(intervalId);
+	endGame();
     }
 }
 
@@ -415,6 +423,10 @@ function Bacteria(t, dt, color)
 	this.isActive = true;
 	this.setTheta(getRandomInt(0, 360));
     };
+
+    this.isGrownUp = function() {
+	return this.dt == maxDt;
+    };
 }
 
 /**
@@ -522,6 +534,16 @@ function isAllBactClear() {
     return true;
 }
 
+function countGrownUps() {
+    var c = 0;
+    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
+	if (objs[i].isActive && objs[i].isGrownUp()) {
+	    c++;
+	}
+    }
+    return c;
+}
+
 function resetGame() {
     console.log('reset game');
     isWin = false;
@@ -535,7 +557,14 @@ function resetGame() {
     nextTick = maxInterval;
     var speedSlider = document.getElementById("speed-slider");
     bactTickInterval = 11 - speedSlider.value;
+    canvas.addEventListener("mousedown", onMouseDown);
     intervalId = window.setInterval(updateGame, updateGameDelay);
+}
+
+function endGame() {
+    console.log('end game');
+    window.clearInterval(intervalId);
+    canvas.removeEventListener("mousedown", onMouseDown);
 }
 
 function setScore(a) {
