@@ -36,7 +36,6 @@ var diskColorIndex = 7;
 // game controls
 var gameTicks = 1;
 var maxInterval = 20;
-// var nextTick = getRandomInt(1, maxInterval); // next tick to generate a new Bacteria
 var nextTick =  maxInterval; // next tick to generate a new Bacteria
 var maxNumBact = 10;
 var maxDt = 15;
@@ -44,6 +43,8 @@ var intervalId = 0;
 var bactTickInterval = 2;	// control the bacteria's speed of growth
 var score = 0;			// user game score;
 var updateGameDelay = 30;	// milliseconds between each call of updateGame()
+var isWin = false;
+var isLost = false;
 
 // game objects
 var objs = [];
@@ -126,6 +127,9 @@ window.onload = function init()
     intervalSlider.onchange = function(event) {
 	maxInterval = event.srcElement.valueAsNumber;
     };
+    document.getElementById("reset").onclick = function () {
+	resetGame();
+    };
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
@@ -141,6 +145,7 @@ function initObjData()
 	var b = new Bacteria(getRandomInt(0, 360), 1, getRandomColor());
 	objs.push(b);
     }
+    activateOneBact();
 
     vIndex = 0;
     for (var j = 0; j < objs.length; j++) {
@@ -169,13 +174,12 @@ function updateGame()
 	gameTicks = 1;
 	return;
     }
+    if (isAllBactClear()) {
+	nextTick = 0;
+	isWin = true;
+    }
     if (gameTicks == nextTick) {
-	var b = objs[getRandomInt(1, maxNumBact + 1)];
-	if (!b.isActive) {
-	    b.isActive = true;
-	    b.setTheta(getRandomInt(0, 360));
-	}
-	// nextTick = gameTicks + getRandomInt(1, maxInterval);
+	activateOneBact();
 	nextTick = gameTicks + maxInterval;
     }
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
@@ -183,6 +187,10 @@ function updateGame()
 	    continue;
 	}
 	objs[i].update();
+    }
+    if (isAllBactClear()) {
+	console.log('YOU WIN');
+	window.clearInterval(intervalId);
     }
 }
 
@@ -241,6 +249,8 @@ function GameObj()
     };
     this.beginIndex = 0;
     this.vCount = this.vertices.length;
+
+    // obj user can query its value, but never set it, only obj can set it internally
     this.isActive = true;
 }
 
@@ -288,7 +298,7 @@ function Bacteria(t, dt, color)
     this.isActive = false;
     this.isPoisoned = false;
     this.poisonDt = 0;		// this.poisonDt can grow from 0 to this.dt
-    this.visualParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+    this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
 
     this._genPoints = function() {
 	var thetaCount = maxDt * 2 + 1;
@@ -320,7 +330,7 @@ function Bacteria(t, dt, color)
 	var middleIndex = Math.floor(numThetas / 2) * 2;
 	this.beginIndex = middleIndex - dt * 2;
 	this.vCount = (2 * dt + 1) * 2;
-	this.visualParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+	this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
 
 	var t = this.theta;
 	var rangePair = rd_pair_rem([t - dt, t + dt], 360);
@@ -363,7 +373,7 @@ function Bacteria(t, dt, color)
 		this._setPoisonedVisibleParts(newdt);
 	    }
 	    else if (newdt == this.dt) {
-		this._reset();
+		this.reset();
 	    }
 	}
     };
@@ -383,23 +393,28 @@ function Bacteria(t, dt, color)
 	var av = this._thetaIndex_to_vIndex(a);
 	var bv = this._thetaIndex_to_vIndex(b);
 	var endVIndex = this._thetaIndex_to_vIndex(endThetaIndex);
-	this.visualParts[0] = [this.beginIndex, av];
-	this.visualParts[1] = [bv, endVIndex];
+	this.visibleParts[0] = [this.beginIndex, av];
+	this.visibleParts[1] = [bv, endVIndex];
     };
 
     this.redraw = function(gl_vIndex) {
 	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
-	for (var i = 0; i < this.visualParts.length; i++) {
-	    gl.drawArrays(this.drawMode, gl_vIndex + this.visualParts[i][0],
-			  this.visualParts[i][1] - this.visualParts[i][0]);
+	for (var i = 0; i < this.visibleParts.length; i++) {
+	    gl.drawArrays(this.drawMode, gl_vIndex + this.visibleParts[i][0],
+			  this.visibleParts[i][1] - this.visibleParts[i][0]);
 	}
     };
 
-    this._reset = function() {
+    this.reset = function() {
 	this.isActive = false;
 	this.isPoisoned = false;
 	this.poisonDt = 0;
 	this.dt = 1;
+    };
+
+    this.activate = function() {
+	this.isActive = true;
+	this.setTheta(getRandomInt(0, 360));
     };
 }
 
@@ -483,11 +498,35 @@ function isInRange(a, begin, end)
 }
 
 function getRandomColor() {
-    // var i = getRandomInt(1, 7);
-    // var j = getRandomInt(1, 7);
-    // var a = baseColors[i];
-    // var b = baseColors[j];
-    // var c = mix(a, b, Math.random());
-    // return c;
     return vec3(Math.random(), Math.random(), Math.random());
+}
+
+function activateOneBact() {
+    var b = objs[getRandomInt(1, maxNumBact + 1)];
+    if (!b.isActive) {
+	b.activate();
+    }
+}
+
+function clearAllBact() {
+    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
+	objs[i].reset();
+    }
+}
+
+function isAllBactClear() {
+    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
+	if (objs[i].isActive) {
+	    return false;
+	}
+    }
+    return true;
+}
+
+function resetGame() {
+    console.log('reset game');
+    isWin = false;
+    isLost = false;
+    activateOneBact();
+    intervalId = window.setInterval(updateGame, updateGameDelay);
 }
