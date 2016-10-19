@@ -8,6 +8,7 @@ body {
 canvas {
     border: 1px solid gray;
     display: inline-block;
+    float: left;
 }
 
 h1 {
@@ -29,7 +30,8 @@ h1 {
 .controls {
     text-align: left;
     width: 550px;
-    margin: auto;
+    margin: 5px;
+    float: left;
 }
 
 .controls button, .controls input {
@@ -64,7 +66,6 @@ a:link, a:visited {
 
 .controls .slider label {
     font-weight: normal;
-    width: 100px;
     height: 25px;
     margin: 2px 0;
 }
@@ -75,5 +76,15 @@ a:link, a:visited {
 }
 
 .slider input {
-    width: 308px;
+    width: 256px;
+}
+
+.game-text {
+    float: left;
+    width: 550px;
+    margin: 5px;
+    text-align: center;
+    color: pink;
+    font-weight: bold;
+    font-size: 24px;
 }

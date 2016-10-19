@@ -179,8 +179,11 @@ function updateGame()
     gameTicks++;
 
     if (isAllBactClear()) {
-	nextTick = 0;
+	nextTick = 0;		// will not generate new bacteria from now on
 	isWin = true;
+	console.log('YOU WIN');
+	endGame();
+	return;
     }
     var numGrownUps = countGrownUps();
     if (numGrownUps == maxGrownUpsToLoseGame) {
@@ -199,10 +202,6 @@ function updateGame()
 	    continue;
 	}
 	objs[i].update();
-    }
-    if (isAllBactClear()) {
-	console.log('YOU WIN');
-	endGame();
     }
 }
 
@@ -563,11 +562,18 @@ function resetGame() {
     var speedSlider = document.getElementById("speed-slider");
     bactTickInterval = 11 - speedSlider.value;
     canvas.addEventListener("mousedown", onMouseDown);
+    document.getElementById("win-or-lose").innerHTML = "";
     intervalId = window.setInterval(updateGame, updateGameDelay);
 }
 
 function endGame() {
     console.log('end game');
+    if (isWin) {
+	document.getElementById("win-or-lose").innerHTML = "YOU WIN";
+    }
+    else if (isLost) {
+	document.getElementById("win-or-lose").innerHTML = "YOU LOSE";
+    }
     window.clearInterval(intervalId);
     canvas.removeEventListener("mousedown", onMouseDown);
 }
