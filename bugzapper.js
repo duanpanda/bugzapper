@@ -131,7 +131,12 @@ function onMouseDown(event) {
 	    if (!isFound) {
 		isFound = true;
 		objs[i].poisonIt();
-		setScore(score + 10);
+		if (objs[i].isGrownUp()) {
+		    setScore(score + 2);
+		}
+		else {
+		    setScore(score + 10);
+		}
 		break;
 	    }
 	}
