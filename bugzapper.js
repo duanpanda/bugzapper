@@ -106,7 +106,8 @@ window.onload = function init()
 	resetGame();
     };
 
-    intervalId = window.setInterval(updateGame, updateGameDelay);
+    console.log(mergeRanges([[12,42],[291,315],[55,65],[27,57]]));
+    // intervalId = window.setInterval(updateGame, updateGameDelay);
 
     render();
 };
@@ -581,4 +582,47 @@ function endGame() {
 function setScore(a) {
     score = a;
     document.getElementById("score").innerHTML = score;
+}
+
+function getBactThetaRanges() {
+    var ranges = [];
+    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
+	if (objs[i].isActive) {
+	    var r = [objs[i].thetaBegin, objs[i].thetaEnd]; // closed range
+	    ranges.push(r);
+	}
+    }
+    return ranges;
+}
+
+function isOverlap(ra, rb) {
+    return !(ra[1] < rb[0] || rb[1] < ra[0]);
+}
+
+function mergeRanges(ranges) {
+    if (ranges.length == 0) {
+	return ranges;
+    }
+    var sorted = ranges.sort(function(a, b) { return a[0] - b[0]; });
+    console.log(sorted);
+    var stack = [sorted[0]];
+    for (var i = 1; i < sorted.length; i++) {
+	var top = stack[stack.length - 1];
+	if (isOverlap(top, sorted[i])) {
+	    var m = merge_range(top, sorted[i]);
+	    stack.pop();
+	    stack.push(m);
+	}
+	else {
+	    stack.push(sorted[i]);
+	}
+    }
+    return stack;
+}
+
+// a and b are circular ranges based on divisor, for example
+function merge_range(a, b) {
+    var newStart = a[0] < b[0] ? a[0] : b[0];
+    var newEnd = a[1] > b[1] ? a[1] : b[1];
+    return [newStart, newEnd];
 }
