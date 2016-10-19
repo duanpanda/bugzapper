@@ -35,7 +35,7 @@ var diskColorIndex = 7;
 
 // game controls
 var gameTicks = 1;
-var maxInterval = 20;
+var maxInterval = 30;
 var nextTick =  maxInterval; // next tick to generate a new Bacteria
 var maxNumBact = 10;
 var maxDt = 15;
@@ -101,13 +101,12 @@ window.onload = function init()
 	    }
 	    var theta1 = objs[i].thetaBegin;
 	    var theta2 = objs[i].thetaEnd;
-	    console.log(polar[0], polar[1]);
+	    // console.log(polar[0], polar[1]);
 	    if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
 		if (!isFound) {
 		    isFound = true;
 		    objs[i].poisonIt();
-		    score += 10;
-		    document.getElementById("score").innerHTML = score;
+		    setScore(score + 10);
 		    break;
 		}
 	    }
@@ -527,6 +526,19 @@ function resetGame() {
     console.log('reset game');
     isWin = false;
     isLost = false;
+    setScore(0);
+    clearAllBact();
     activateOneBact();
+    gameTicks = 1;
+    var intervalSlider = document.getElementById("interval-slider");
+    maxInterval = intervalSlider.valueAsNumber;
+    nextTick = maxInterval;
+    var speedSlider = document.getElementById("speed-slider");
+    bactTickInterval = 11 - speedSlider.value;
     intervalId = window.setInterval(updateGame, updateGameDelay);
+}
+
+function setScore(a) {
+    score = a;
+    document.getElementById("score").innerHTML = score;
 }
