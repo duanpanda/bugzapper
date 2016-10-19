@@ -45,7 +45,7 @@ var score = 0;			// user game score;
 var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 var isWin = false;
 var isLost = false;
-var maxGrownUpsToLoseGame = 2;
+var maxGrownUpsToLoseGame = 5;
 
 // game objects
 var objs = [];
@@ -106,8 +106,11 @@ window.onload = function init()
 	resetGame();
     };
 
-    console.log(mergeRanges([[12,42],[291,315],[55,65],[27,57]]));
     // intervalId = window.setInterval(updateGame, updateGameDelay);
+    var xx = [[7, 37], [53, 83], [82, 84],[97,127],[118,146],[230,238],[306,336]];
+    console.log(xx);
+    var yy = mergeRanges(xx);
+    console.log(yy);
 
     render();
 };
@@ -198,6 +201,15 @@ function updateGame()
 	activateOneBact();
 	nextTick = gameTicks + maxInterval;
     }
+    // merge bacterias
+    var bacterias = objs.slice(bactBegin, bactBegin + maxNumBact);
+    bacterias.sort(compareBact);
+    var input = getBactThetaRanges(bacterias);
+    console.log('before', input);
+    var output = mergeRanges(input);
+    console.log('after', output);
+
+    // update each bacteria's internal state
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (!objs[i].isActive) {
 	    continue;
@@ -303,8 +315,10 @@ function Bacteria(t, dt, color)
 
     GameObj.call(this);
     this.theta = t;
-    this.thetaBegin = t;	// value range: [-359, 359]
-    this.thetaEnd = t;		// value range: [-359, 359]
+    this.thetaBegin = t;	// value range: [0, 359]
+    this.thetaEnd = t;		// value range: [0, 359]
+    this.thetaBeginForMerge = t; // value range: [-359, 359]
+    this.thetaEndForMerge = t;	 // value range: [-359, 359]
     this.dt = dt;
     this.drawMode = gl.TRIANGLE_STRIP;
     this.isActive = false;
@@ -348,6 +362,8 @@ function Bacteria(t, dt, color)
 	var rangePair = rd_pair_rem([t - dt, t + dt], 360);
 	this.thetaBegin = rangePair[0];
 	this.thetaEnd = rangePair[1];
+	this.thetaBeginForMerge = t - dt;
+	this.thetaEndForMerge = (t + dt) % 360;
     };
 
     this.setColor = function(c) {
@@ -462,10 +478,12 @@ function rd_pair_rem(pair, divisor)
 // return at most 2 ranges.
 // Example 1: pair = [15, 359], divisor = 360, return [[15, 359]].
 // Example 2: pair = [340, 25], divisor = 360, return [[340, 360], [0, 2]].
-function rd_gen_ranges(pair, divisor)
+function split_circular_ranges(pair, divisor)
 {
     var a = pair[0];
     var b = pair[1];
+    assert(a >= 0 && a <= 359, 'must: 0 <= a <= 359');
+    assert(b >= 0 && b <= 359, 'must: 0 <= b <= 359');
     if (a <= b) {
 	return [[a, b]];
     }
@@ -507,7 +525,7 @@ function isInRange(a, begin, end)
 	return a >= begin && a <= end;
     }
     else {
-	var ranges = rd_gen_ranges([begin, end], 360);
+	var ranges = split_circular_ranges([begin, end], 360);
 	return a >= ranges[0][0] && a <= ranges[0][1] ||
 	    a >= ranges[1][0] && a <= ranges[1][1];
     }
@@ -584,18 +602,14 @@ function setScore(a) {
     document.getElementById("score").innerHTML = score;
 }
 
-function getBactThetaRanges() {
-    var ranges = [];
-    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
-	if (objs[i].isActive) {
-	    var r = [objs[i].thetaBegin, objs[i].thetaEnd]; // closed range
-	    ranges.push(r);
-	}
-    }
-    return ranges;
+function isOverlap(ra, rb) {
+    return !(ra[1] < rb[0] || rb[1] < ra[0]);
 }
 
-function isOverlap(ra, rb) {
+// input are two Bacteria objects
+function isBactOverlap(a, b) {
+    var ra = [a.thetaBeginForMerge, a.thetaEndForMerge];
+    var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
     return !(ra[1] < rb[0] || rb[1] < ra[0]);
 }
 
@@ -603,10 +617,15 @@ function mergeRanges(ranges) {
     if (ranges.length == 0) {
 	return ranges;
     }
-    var sorted = ranges.sort(function(a, b) { return a[0] - b[0]; });
+    var linearRanges = [];
+    for (var i = 0; i < ranges.length; i++) {
+	var a = split_circular_ranges(ranges[i], 360);
+	linearRanges = linearRanges.concat(a);
+    }
+    var sorted = linearRanges.sort(function(a, b) { return a[0] - b[0]; });
     console.log(sorted);
     var stack = [sorted[0]];
-    for (var i = 1; i < sorted.length; i++) {
+    for (i = 1; i < sorted.length; i++) {
 	var top = stack[stack.length - 1];
 	if (isOverlap(top, sorted[i])) {
 	    var m = merge_range(top, sorted[i]);
@@ -620,9 +639,27 @@ function mergeRanges(ranges) {
     return stack;
 }
 
-// a and b are circular ranges based on divisor, for example
+// input a and b are linear ranges.
+// output a linear range (i.e. no cross 359 degrees and 0 degree boarder)
 function merge_range(a, b) {
     var newStart = a[0] < b[0] ? a[0] : b[0];
     var newEnd = a[1] > b[1] ? a[1] : b[1];
     return [newStart, newEnd];
+}
+
+function compareBact(a, b) {
+    return a.thetaBeginForMerge - b.thetaBeginForMerge;
+}
+
+// test
+function getBactThetaRanges(bacterias) {
+    var ranges = [];
+    for (var i = 0; i < bacterias.length; i++) {
+	if (bacterias[i].isActive) {
+	    // closed range
+	    var r = [bacterias[i].thetaBeginForMerge, bacterias[i].thetaEndForMerge];
+	    ranges.push(r);
+	}
+    }
+    return ranges;
 }
