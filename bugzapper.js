@@ -107,6 +107,11 @@ window.onload = function init()
     document.getElementById("reset").onclick = function () {
 	resetGame();
     };
+    var maxCompleteBactNum = document.getElementById("bactCountToLose");
+    maxCompleteBactNum.value = maxGrownUpsToLoseGame;
+    maxCompleteBactNum.onchange = function(event) {
+	maxGrownUpsToLoseGame = maxCompleteBactNum.valueAsNumber;
+    };
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
@@ -626,6 +631,8 @@ function resetGame()
     nextTick = maxInterval;
     var speedSlider = document.getElementById("speed-slider");
     bactTickInterval = 11 - speedSlider.value;
+    var maxCompleteBactNum = document.getElementById("bactCountToLose");
+    maxGrownUpsToLoseGame = maxCompleteBactNum.valueAsNumber;
     canvas.addEventListener("mousedown", onMouseDown);
     document.getElementById("win-or-lose").innerHTML = "";
     window.clearInterval(intervalId); // necessary
