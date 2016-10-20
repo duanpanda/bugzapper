@@ -755,7 +755,7 @@ function eat(a, b)
     var t = rd_rem(rc[0] + dt, 360);
     console.log(t);
     // var maxdt = dt + Math.floor(((a.maxdt - a.dt) + (b.maxdt - b.dt)) / 2);
-    var maxdt = dt;
+    var maxdt = dt < 15 ? 15 : dt;
     if (dt == 0) {
 	t = 0;
 	dt = 180;
