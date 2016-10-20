@@ -36,7 +36,7 @@ var diskColorIndex = 7;
 // game controls
 var gameTicks = 1;
 var maxInterval = 30;
-var nextTick =  maxInterval; // next tick to generate a new Bacteria
+var nextTick =	maxInterval; // next tick to generate a new Bacteria
 var maxDt = 15;
 var intervalId = 0;
 var bactTickInterval = 2;	// control the bacteria's speed of growth
@@ -44,7 +44,7 @@ var score = 0;			// user game score;
 var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 var isWin = false;
 var isLost = false;
-var maxGrownUpsToLoseGame = 8;
+var maxGrownUpsToLoseGame = 7;
 
 // game objects
 var objs = [];			// for GL, it references disk, bacterias, etc.
@@ -151,7 +151,6 @@ function initObjData()
     objs.push(disk);
 
     addOneStdBact_updateGLBuf(getRandomInt(0, 360));
-    rebuildGLBuf(objs);
 }
 
 function addGLObj(obj)
@@ -200,7 +199,9 @@ function updateGame()
     }
 
     // merge bacterias
+    console.log('before merge: ' + rangeArrayToString(getBactThetaRanges(bacterias)));
     var newBactList = mergeBacterias();
+    console.log('after merge: ' + rangeArrayToString(getBactThetaRanges(newBactList)));
     // rebuild objs list
     bacterias = newBactList;
     objs = [disk].concat(bacterias);
@@ -219,7 +220,7 @@ function updateGame()
 function render()
 {
     gl.clear(gl.COLOR_BUFFER_BIT);
-    var vi = 0;      // vertex index in vertex buffer and color buffer
+    var vi = 0;	     // vertex index in vertex buffer and color buffer
     for (var i = 0; i < objs.length; i++) {
 	if (objs[i].isActive) {
 	    objs[i].redraw(vi);
@@ -344,7 +345,7 @@ function Bacteria(t, dt, maxdt, color)
     this._genPoints();
 
     // input value range (closed range, degrees):
-    //     [0, numThetas in this bacteria]
+    //	   [0, numThetas in this bacteria]
     this._thetaIndex_to_vIndex = function(i) {
 	return 2 * i;
     };
@@ -522,7 +523,7 @@ function xy_to_polar(x, y)
 // theta1 and theta2 are in degrees that is in the closed range [0, 359]
 // pre: r1 <= r2
 // pre: no matter who is larger, theta1 is the beginning of the range, theta2
-//      is the end of the range.
+//	is the end of the range.
 function isInBacteria(point, r1, r2, theta1, theta2)
 {
     var r = point[0];
@@ -567,7 +568,6 @@ function addBact(b)
     bacterias.push(b);
     console.log('bacterias.length=', bacterias.length);
     objs.push(b);
-    console.log('objs.length=', objs.length);
 }
 
 function removeBact(b)
@@ -581,7 +581,6 @@ function removeBact(b)
     }
     if (objindex != -1) {
 	removedItem = objs.splice(objindex, 1);
-	console.log('objs.length=', objs.length);
 	rebuildGLBuf(objs);
     }
 }
@@ -656,26 +655,34 @@ function mergeBacterias()
     bacterias.sort(compareBact); // it changes bacterias object
     var stack = [bacterias[0]];
     for (var i = 1; i < bacterias.length; i++) {
-	var top = stack[stack.length - 1];
-	if (bacterias[i].isActive && !bacterias[i].isPoisoned &&
-	    top.isActive && !top.isPoisoned &&
-	    top.isOverlap(bacterias[i])) {
-	    var a, b;
-	    if (top.dt >= bacterias[i].dt) {
-		a = top; b = bacterias[i];
+	var target = bacterias[i];
+	var isMerged = false;
+	for (var j = stack.length - 1; j >= 0; j--) {
+	    if (target.isActive && !target.isPoisoned &&
+		stack[j].isActive && !stack[j].isPoisoned &&
+		stack[j].isOverlap(target)) {
+		var a, b;
+		if (stack[j].dt >= target.dt) {
+		    a = stack[j]; b = target;
+		}
+		else {
+		    a = target; b = stack[j];
+		}
+		var c = eat(a, b);	// order: a eats b, c uses a's color
+		a.reset();
+		b.reset();
+		c.activate();
+
+		stack.splice(j, 1, c);
+		target = stack[j];
+		isMerged = true;
 	    }
 	    else {
-		a = bacterias[i]; b = top;
+		if (!isMerged) {
+		    stack.push(target);
+		    break;
+		}
 	    }
-	    var c = eat(a, b);	// order: a eats b, c uses a's color
-	    stack.pop();
-	    stack.push(c);
-	    a.reset();
-	    b.reset();
-	    c.activate();
-	}
-	else {
-	    stack.push(bacterias[i]);
 	}
     }
     return stack;
@@ -747,9 +754,27 @@ function eat(a, b)
     var dt = (rc[1] - rc[0]) / 2;
     var t = rd_rem(rc[0] + dt, 360);
     console.log(t);
-    var maxdt = dt + Math.floor(((a.maxdt - a.dt) + (b.maxdt - b.dt)) / 2);
+    // var maxdt = dt + Math.floor(((a.maxdt - a.dt) + (b.maxdt - b.dt)) / 2);
+    var maxdt = dt;
+    if (dt == 0) {
+	t = 0;
+	dt = 180;
+	maxtdt = 180;
+    }
     assert(dt > 0);
     assert(maxdt >= dt);
     var c = new Bacteria(t, dt, maxdt, a.color);
     return c;
+}
+
+// test
+function rangeArrayToString(rr)
+{
+    var s = '[';
+    for (var i = 0; i < rr.length; i++) {
+	var r = rr[i];
+	s += '[' + r[0] + ',' + r[1] + ']';
+    }
+    s += ']';
+    return s;
 }
