@@ -48,8 +48,11 @@ var isLost = false;
 var maxGrownUpsToLoseGame = 8;
 
 // game objects
-var objs = [];
+var objs = [];			// for GL, it references disk, bacterias, etc.
 var bactBegin = 1;		// index of objs for the first bacteria obj
+var disk = null;
+var bacterias = [];
+
 
 window.onload = function init()
 {
@@ -120,18 +123,17 @@ function onMouseDown(event) {
     var gly = 2 * (canvas.height - y) / canvas.height - 1;
     var polar = xy_to_polar(glx, gly);
     var isFound = false;
-    for (var i = bactBegin + maxNumBact - 1; i >= bactBegin; i--) {
-	if (!objs[i].isActive) {
+    for (var i = bacterias.length - 1; i >= 0; i--) {
+	if (!bacterias[i].isActive) {
 	    continue;
 	}
-	var theta1 = objs[i].thetaBegin;
-	var theta2 = objs[i].thetaEnd;
-	// console.log(polar[0], polar[1]);
+	var theta1 = bacterias[i].thetaBegin;
+	var theta2 = bacterias[i].thetaEnd;
 	if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
 	    if (!isFound) {
 		isFound = true;
-		objs[i].poisonIt();
-		if (objs[i].isGrownUp()) {
+		bacterias[i].poisonIt();
+		if (bacterias[i].isGrownUp()) {
 		    setScore(score + 2);
 		}
 		else {
@@ -146,14 +148,10 @@ function onMouseDown(event) {
 
 function initObjData()
 {
-    var disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
+    disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
     objs.push(disk);
 
-    for (var i = 0; i < maxNumBact; i++) {
-	var b = new Bacteria(getRandomInt(0, 360), 1, maxDt, getRandomColor());
-	objs.push(b);
-    }
-    activateOneBact();
+    addOneStdBact();
 
     rebuildGLBuf(objs);
 }
@@ -199,32 +197,33 @@ function updateGame()
 	return;
     }
     if (gameTicks == nextTick) {
-	activateOneBact();
+	addOneStdBact();
 	nextTick = gameTicks + maxInterval;
     }
 
-    // merge bacterias
-    var newBactList = mergeBacterias();
-    // console.log(getBactThetaRanges(newBactList));
-    // rebuild objs list
-    var newobjs = [objs[0]];	// disk
-    for (var i = 0; i < newBactList.length; i++) {
-	newobjs.push(newBactList[i]);
-    }
-    for (i = 0; i < maxNumBact - newBactList.length; i++) {
-	var b = new Bacteria(getRandomInt(0, 360), 1, maxDt, getRandomColor());
-	newobjs.push(b);
-    }
-    objs = newobjs;
-    // rebuild GL buffers
-    rebuildGLBuf(objs);
+    // // merge bacterias
+    // var newBactList = mergeBacterias();
+    // // console.log(getBactThetaRanges(newBactList));
+    // // rebuild objs list
+    // var newobjs = [objs[0]];	// disk
+    // for (var i = 0; i < newBactList.length; i++) {
+    // 	newobjs.push(newBactList[i]);
+    // }
+    // for (i = 0; i < maxNumBact - newBactList.length; i++) {
+    // 	var b = new Bacteria(getRandomInt(0, 360), 1, getRandomInt(1, 2 * maxDt), getRandomColor());
+    // 	newobjs.push(b);
+    // }
+    // objs = newobjs;
+    // // rebuild GL buffers
+    // rebuildGLBuf(objs);
 
     // update each bacteria's internal state
-    for (i = bactBegin; i < bactBegin + maxNumBact; i++) {
-	if (!objs[i].isActive) {
+    // for (i = bactBegin; i < bactBegin + maxNumBact; i++) {
+    for (i = 0; i < bacterias.length; i++) {
+	if (!bacterias[i].isActive) {
 	    continue;
 	}
-	objs[i].update();
+	bacterias[i].update();
     }
 }
 
@@ -553,28 +552,50 @@ function getRandomColor()
     return vec3(Math.random(), Math.random(), Math.random());
 }
 
-function activateOneBact()
+function addOneStdBact()
 {
-    for (i = bactBegin; i < bactBegin + maxNumBact; i++) {
-	if (!objs[i].isActive) {
-	    objs[i].setTheta(getRandomInt(0, 360));
-	    objs[i].activate();
-	    return;
-	}
+    var b = new Bacteria(getRandomInt(0, 360), 1, maxDt, getRandomColor());
+    b.setTheta(getRandomInt(0, 360));
+    b.activate();
+    addBact(b);
+}
+
+function addBact(b)
+{
+    bacterias.push(b);
+    console.log('bacterias.length=', bacterias.length);
+    objs.push(b);
+    console.log('objs.length=', objs.length);
+    rebuildGLBuf(objs);
+}
+
+function removeBact(b)
+{
+    var index = bacterias.indexOf(b);
+    var objindex = objs.indexOf(b);
+    if (index != -1) {
+	var removedItem = bacterias.splice(index, 1);
+	assert(removedItem == b);
+	console.log('bacterias.length=', bacterias.length);
+    }
+    if (objindex != -1) {
+	removedItem = objs.splice(objindex, 1);
+	console.log('objs.length=', objs.length);
+	rebuildGLBuf(objs);
     }
 }
 
 function clearAllBact()
 {
-    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
-	objs[i].reset();
-    }
+    bacterias = [];
+    objs = [];
+    objs.push(disk);
 }
 
 function isAllBactClear()
 {
-    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
-	if (objs[i].isActive) {
+    for (var i = 0; i < bacterias.length; i++) {
+	if (bacterias[i].isActive) {
 	    return false;
 	}
     }
@@ -584,8 +605,8 @@ function isAllBactClear()
 function countGrownUps()
 {
     var c = 0;
-    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
-	if (objs[i].isActive && objs[i].isGrownUp()) {
+    for (var i = 0; i < bacterias.length; i++) {
+	if (bacterias[i].isActive && bacterias[i].isGrownUp()) {
 	    c++;
 	}
     }
@@ -594,12 +615,11 @@ function countGrownUps()
 
 function resetGame()
 {
-    console.log('reset game');
     isWin = false;
     isLost = false;
     setScore(0);
     clearAllBact();
-    activateOneBact();
+    addOneStdBact();
     gameTicks = 1;
     var intervalSlider = document.getElementById("interval-slider");
     maxInterval = intervalSlider.valueAsNumber;
@@ -608,12 +628,12 @@ function resetGame()
     bactTickInterval = 11 - speedSlider.value;
     canvas.addEventListener("mousedown", onMouseDown);
     document.getElementById("win-or-lose").innerHTML = "";
+    window.clearInterval(intervalId); // necessary
     intervalId = window.setInterval(updateGame, updateGameDelay);
 }
 
 function endGame()
 {
-    console.log('end game');
     if (isWin) {
 	document.getElementById("win-or-lose").innerHTML = "YOU WIN";
     }
