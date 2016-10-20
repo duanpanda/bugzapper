@@ -201,24 +201,16 @@ function updateGame()
 	nextTick = gameTicks + maxInterval;
     }
 
-    // // merge bacterias
-    // var newBactList = mergeBacterias();
-    // // console.log(getBactThetaRanges(newBactList));
-    // // rebuild objs list
-    // var newobjs = [objs[0]];	// disk
-    // for (var i = 0; i < newBactList.length; i++) {
-    // 	newobjs.push(newBactList[i]);
-    // }
-    // for (i = 0; i < maxNumBact - newBactList.length; i++) {
-    // 	var b = new Bacteria(getRandomInt(0, 360), 1, getRandomInt(1, 2 * maxDt), getRandomColor());
-    // 	newobjs.push(b);
-    // }
-    // objs = newobjs;
-    // // rebuild GL buffers
-    // rebuildGLBuf(objs);
+    // merge bacterias
+    var newBactList = mergeBacterias();
+    // console.log(getBactThetaRanges(newBactList));
+    // rebuild objs list
+    bacterias = newBactList;
+    objs = [disk].concat(bacterias);
+    // rebuild GL buffers
+    rebuildGLBuf(objs);
 
     // update each bacteria's internal state
-    // for (i = bactBegin; i < bactBegin + maxNumBact; i++) {
     for (i = 0; i < bacterias.length; i++) {
 	if (!bacterias[i].isActive) {
 	    continue;
