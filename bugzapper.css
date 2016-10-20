@@ -29,7 +29,7 @@ h1 {
 
 .controls {
     text-align: center;
-    width: 700px;
+    width: 600px;
     margin: 5px;
     float: left;
 }
@@ -71,7 +71,7 @@ a:link, a:visited {
 }
 
 .controls .slider {
-    margin-left: 70px;
+    margin-left: 10px;
     display: block;
 }
 

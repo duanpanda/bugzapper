@@ -26,6 +26,7 @@ var vertexBufferSize = BYTES_PER_VERTEX * maxNumVertices;
 var colorBufferSize = vertexBufferSize;
 var vIndex = 0;			// vertex index of GL vertex buffer
 var thetaLoc;
+var pointSizeLoc;
 
 // attributes that configure the game and the game objects
 var rDisk = 0.7;
@@ -44,14 +45,14 @@ var score = 0;			// user game score;
 var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 var isWin = false;
 var isLost = false;
-var maxGrownUpsToLoseGame = 7;
+var maxGrownUpsToLoseGame = 5;
+var maxNumParticlePoints = 80;
 
 // game objects
 var objs = [];			// for GL, it references disk, bacterias, etc.
-var bactBegin = 1;		// index of objs for the first bacteria obj
 var disk = null;
 var bacterias = [];
-
+var particles = [];
 
 window.onload = function init()
 {
@@ -73,6 +74,7 @@ window.onload = function init()
     gl.enableVertexAttribArray(vColor);
 
     thetaLoc = gl.getUniformLocation(program, "theta");
+    pointSizeLoc = gl.getUniformLocation(program, "pointSize");
 
     vBuf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
@@ -154,8 +156,13 @@ function initObjData()
 {
     disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
     objs.push(disk);
-
-    addOneStdBact_updateGLBuf(getRandomInt(0, 360));
+    addOneStdBact(getRandomInt(0, 360));
+    // addOneStdBact(31);
+    // addOneStdBact(0);
+    var p = new Particles(rCrustOuter, 30);
+    particles.push(p);
+    objs.push(p);
+    rebuildGLBuf(objs);
 }
 
 function addGLObj(obj)
@@ -210,6 +217,7 @@ function updateGame()
     // rebuild objs list
     bacterias = newBactList;
     objs = [disk].concat(bacterias);
+    objs = objs.concat(particles);
     // rebuild GL buffers
     rebuildGLBuf(objs);
 
@@ -219,6 +227,13 @@ function updateGame()
 	    continue;
 	}
 	bacterias[i].update();
+    }
+
+    for (i = 0; i < particles.length; i++) {
+	if (!particles[i].isActive) {
+	    continue;
+	}
+	particles[i].update();
     }
 }
 
@@ -784,4 +799,53 @@ function rangeArrayToString(rr)
     }
     s += ']';
     return s;
+}
+
+function Particles(r, theta)
+{
+    GameObj.call(this);
+    this.theta = theta;
+    this.drawMode = gl.POINTS;
+    this._genPoints = function() {
+	if (this.vertices.length != maxNumParticlePoints) {
+	    this.vertices = new Array(maxNumParticlePoints);
+	}
+	var tu = theta * DEGREE_TO_RADIAN;
+	var tv = (theta - 5) * DEGREE_TO_RADIAN;
+	var tw = (theta + 5) * DEGREE_TO_RADIAN;
+	var u = [r * Math.cos(tu), r * Math.sin(tu)];
+	var v = [(r+0.15) * Math.cos(tv), (r+0.15) * Math.sin(tv)];
+	var w = [(r+0.15) * Math.cos(tw), (r+0.15) * Math.sin(tw)];
+	for (var i = 0; i < maxNumParticlePoints; i++) {
+	    var s1 = Math.random();
+	    var uv = mix(u, v, s1);
+	    var s2 = Math.random();
+	    var uvw = mix(uv, w, s2); // point in triangle (u, v, w) region
+	    this.vertices[i] = uvw;
+	}
+    };
+    this._genPoints();
+    this.vCount = this.vertices.length;
+    this.setColor(vec3(0.9, 0.7, 0.2));
+    this.pointSize = 4;
+    this.redraw = function(gl_vIndex) {
+	gl.uniform1f(pointSizeLoc, this.pointSize);
+	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
+	gl.drawArrays(this.drawMode, gl_vIndex + this.beginIndex, this.vCount);
+    };
+    this.update = function() {
+	if (!this.isActive) {
+	    return;
+	}
+	this.theta++;
+	if (gameTicks % 20 == 0) {
+	    this.pointSize--;
+	    if (this.pointSize == 0) {
+		this.inactivate();
+	    }
+	}
+    };
+    this.inactivate = function() {
+	this.isActive = false;
+    };
 }

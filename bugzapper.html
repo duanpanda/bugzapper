@@ -11,6 +11,7 @@
      attribute vec3 vColor;
      varying vec4 color;
      uniform float theta;
+     uniform float pointSize;
 
      void
      main()
@@ -22,6 +23,7 @@
        gl_Position.y = s * vPosition.x + c * vPosition.y;
        gl_Position.z = 0.0;
        gl_Position.w = 1.0;
+       gl_PointSize = pointSize;
 
        color = vec4(vColor, 1.0);
      }
