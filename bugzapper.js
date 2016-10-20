@@ -45,7 +45,7 @@ var score = 0;			// user game score;
 var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 var isWin = false;
 var isLost = false;
-var maxGrownUpsToLoseGame = 5;
+var maxGrownUpsToLoseGame = 8;
 
 // game objects
 var objs = [];
@@ -106,11 +106,7 @@ window.onload = function init()
 	resetGame();
     };
 
-    // intervalId = window.setInterval(updateGame, updateGameDelay);
-    var xx = [[7, 37], [53, 83], [82, 84],[97,127],[118,146],[230,238],[306,336]];
-    console.log(xx);
-    var yy = mergeRanges(xx);
-    console.log(yy);
+    intervalId = window.setInterval(updateGame, updateGameDelay);
 
     render();
 };
@@ -154,15 +150,12 @@ function initObjData()
     objs.push(disk);
 
     for (var i = 0; i < maxNumBact; i++) {
-	var b = new Bacteria(getRandomInt(0, 360), 1, getRandomColor());
+	var b = new Bacteria(getRandomInt(0, 360), 1, maxDt, getRandomColor());
 	objs.push(b);
     }
     activateOneBact();
 
-    vIndex = 0;
-    for (var j = 0; j < objs.length; j++) {
-	addGLObj(objs[j]);
-    }
+    rebuildGLBuf(objs);
 }
 
 function addGLObj(obj)
@@ -176,6 +169,14 @@ function addGLObj(obj)
     gl.bufferSubData(gl.ARRAY_BUFFER, vIndex * BYTES_PER_VERTEX_COLOR, c);
 
     vIndex += obj.vertices.length;
+}
+
+function rebuildGLBuf(objs)
+{
+    vIndex = 0;
+    for (var i = 0; i < objs.length; i++) {
+	addGLObj(objs[i]);
+    }
 }
 
 function updateGame()
@@ -201,16 +202,25 @@ function updateGame()
 	activateOneBact();
 	nextTick = gameTicks + maxInterval;
     }
+
     // merge bacterias
-    var bacterias = objs.slice(bactBegin, bactBegin + maxNumBact);
-    bacterias.sort(compareBact);
-    var input = getBactThetaRanges(bacterias);
-    console.log('before', input);
-    var output = mergeRanges(input);
-    console.log('after', output);
+    var newBactList = mergeBacterias();
+    // console.log(getBactThetaRanges(newBactList));
+    // rebuild objs list
+    var newobjs = [objs[0]];	// disk
+    for (var i = 0; i < newBactList.length; i++) {
+	newobjs.push(newBactList[i]);
+    }
+    for (i = 0; i < maxNumBact - newBactList.length; i++) {
+	var b = new Bacteria(getRandomInt(0, 360), 1, maxDt, getRandomColor());
+	newobjs.push(b);
+    }
+    objs = newobjs;
+    // rebuild GL buffers
+    rebuildGLBuf(objs);
 
     // update each bacteria's internal state
-    for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
+    for (i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (!objs[i].isActive) {
 	    continue;
 	}
@@ -305,8 +315,8 @@ function Disk(x, y, r, c)
     this.vCount = this.vertices.length;
 }
 
-// pre: 0 <= t0 <= 359, 0 <= dt <= 359, integers
-function Bacteria(t, dt, color)
+// pre: 0 <= t0 <= 359, 0 <= dt <= 359, 0 <= maxdt <= 359, integers
+function Bacteria(t, dt, maxdt, color)
 {
     assert(t >= 0 && t <= 359, 'must: 0 <= t <= 359');
     assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
@@ -320,6 +330,7 @@ function Bacteria(t, dt, color)
     this.thetaBeginForMerge = t; // value range: [-359, 359]
     this.thetaEndForMerge = t;	 // value range: [-359, 359]
     this.dt = dt;
+    this.maxdt = maxdt;
     this.drawMode = gl.TRIANGLE_STRIP;
     this.isActive = false;
     this.isPoisoned = false;
@@ -327,11 +338,11 @@ function Bacteria(t, dt, color)
     this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
 
     this._genPoints = function() {
-	var thetaCount = maxDt * 2 + 1;
+	var thetaCount = maxdt * 2 + 1;
 	if (this.vertices.length != thetaCount) {
 	    this.vertices = new Array(thetaCount * 2);
 	}
-	for (var t = -maxDt, i = 0; t <= maxDt; t++, i += 2) {
+	for (var t = -maxdt, i = 0; t <= maxdt; t++, i += 2) {
 	    var tr = t * DEGREE_TO_RADIAN;
 	    var p1x = rCrustInner * Math.cos(tr);
 	    var p1y = rCrustInner * Math.sin(tr);
@@ -385,12 +396,13 @@ function Bacteria(t, dt, color)
 
     this.setColor(color);
     this._setVisiblePart(dt);
+    this.setTheta(t);
 
     this.update = function() {
 	if (gameTicks % bactTickInterval == 0) {
 	    var olddt = this.dt;
 	    var newdt = olddt + 1;
-	    if (newdt <= maxDt) {
+	    if (newdt <= maxdt) {
 		this._setVisiblePart(newdt);
 	    }
 	}
@@ -442,11 +454,16 @@ function Bacteria(t, dt, color)
 
     this.activate = function() {
 	this.isActive = true;
-	this.setTheta(getRandomInt(0, 360));
     };
 
     this.isGrownUp = function() {
-	return this.dt == maxDt;
+	return this.dt == maxdt;
+    };
+
+    this.isOverlap = function(b) {
+	var ra = [this.thetaBeginForMerge, this.thetaEndForMerge];
+	var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
+	return !(ra[1] < rb[0] || rb[1] < ra[0]);
     };
 }
 
@@ -531,24 +548,31 @@ function isInRange(a, begin, end)
     }
 }
 
-function getRandomColor() {
+function getRandomColor()
+{
     return vec3(Math.random(), Math.random(), Math.random());
 }
 
-function activateOneBact() {
-    var b = objs[getRandomInt(1, maxNumBact + 1)];
-    if (!b.isActive) {
-	b.activate();
+function activateOneBact()
+{
+    for (i = bactBegin; i < bactBegin + maxNumBact; i++) {
+	if (!objs[i].isActive) {
+	    objs[i].setTheta(getRandomInt(0, 360));
+	    objs[i].activate();
+	    return;
+	}
     }
 }
 
-function clearAllBact() {
+function clearAllBact()
+{
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	objs[i].reset();
     }
 }
 
-function isAllBactClear() {
+function isAllBactClear()
+{
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (objs[i].isActive) {
 	    return false;
@@ -557,7 +581,8 @@ function isAllBactClear() {
     return true;
 }
 
-function countGrownUps() {
+function countGrownUps()
+{
     var c = 0;
     for (var i = bactBegin; i < bactBegin + maxNumBact; i++) {
 	if (objs[i].isActive && objs[i].isGrownUp()) {
@@ -567,7 +592,8 @@ function countGrownUps() {
     return c;
 }
 
-function resetGame() {
+function resetGame()
+{
     console.log('reset game');
     isWin = false;
     isLost = false;
@@ -585,7 +611,8 @@ function resetGame() {
     intervalId = window.setInterval(updateGame, updateGameDelay);
 }
 
-function endGame() {
+function endGame()
+{
     console.log('end game');
     if (isWin) {
 	document.getElementById("win-or-lose").innerHTML = "YOU WIN";
@@ -597,43 +624,38 @@ function endGame() {
     canvas.removeEventListener("mousedown", onMouseDown);
 }
 
-function setScore(a) {
+function setScore(a)
+{
     score = a;
     document.getElementById("score").innerHTML = score;
 }
 
-function isOverlap(ra, rb) {
-    return !(ra[1] < rb[0] || rb[1] < ra[0]);
-}
-
-// input are two Bacteria objects
-function isBactOverlap(a, b) {
-    var ra = [a.thetaBeginForMerge, a.thetaEndForMerge];
-    var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
-    return !(ra[1] < rb[0] || rb[1] < ra[0]);
-}
-
-function mergeRanges(ranges) {
-    if (ranges.length == 0) {
-	return ranges;
-    }
-    var linearRanges = [];
-    for (var i = 0; i < ranges.length; i++) {
-	var a = split_circular_ranges(ranges[i], 360);
-	linearRanges = linearRanges.concat(a);
-    }
-    var sorted = linearRanges.sort(function(a, b) { return a[0] - b[0]; });
-    console.log(sorted);
-    var stack = [sorted[0]];
-    for (i = 1; i < sorted.length; i++) {
+function mergeBacterias()
+{
+    var bacterias = objs.slice(bactBegin, bactBegin + maxNumBact);
+    bacterias.sort(compareBact); // changes bacterias object
+    var stack = [bacterias[0]];
+    for (var i = 1; i < bacterias.length; i++) {
 	var top = stack[stack.length - 1];
-	if (isOverlap(top, sorted[i])) {
-	    var m = merge_range(top, sorted[i]);
+	if (bacterias[i].isActive && !bacterias[i].isPoisoned &&
+	    top.isActive && !top.isPoisoned &&
+	    top.isOverlap(bacterias[i])) {
+	    var a, b;
+	    if (top.dt > bacterias[i].dt) {
+		a = top; b = bacterias[i];
+	    }
+	    else {
+		a = bacterias[i]; b = top;
+	    }
+	    var c = eat(a, b);
 	    stack.pop();
-	    stack.push(m);
+	    stack.push(c);
+	    a.reset();
+	    b.reset();
+	    c.activate();
 	}
 	else {
-	    stack.push(sorted[i]);
+	    stack.push(bacterias[i]);
 	}
     }
     return stack;
@@ -641,18 +663,21 @@ function mergeRanges(ranges) {
 
 // input a and b are linear ranges.
 // output a linear range (i.e. no cross 359 degrees and 0 degree boarder)
-function merge_range(a, b) {
+function merge_range(a, b)
+{
     var newStart = a[0] < b[0] ? a[0] : b[0];
     var newEnd = a[1] > b[1] ? a[1] : b[1];
     return [newStart, newEnd];
 }
 
-function compareBact(a, b) {
+function compareBact(a, b)
+{
     return a.thetaBeginForMerge - b.thetaBeginForMerge;
 }
 
 // test
-function getBactThetaRanges(bacterias) {
+function getBactThetaRanges(bacterias)
+{
     var ranges = [];
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive) {
@@ -662,4 +687,28 @@ function getBactThetaRanges(bacterias) {
 	}
     }
     return ranges;
+}
+
+function eat(a, b)
+{
+    var ra = [a.thetaBeginForMerge, a.thetaEndForMerge];
+    var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
+    console.log('ra', ra);
+    console.log('rb', rb);
+    var rc = merge_range(ra, rb);
+    console.log(rc);
+    if ((rc[1] - rc[0]) % 2 == 1) {
+	rc[0] -= 1;
+    }
+    var dt = (rc[1] - rc[0]) / 2;
+    var t = rc[0] + dt;
+    if (t < 0) {
+	t += 360;
+    }
+    console.log(t);
+    var maxdt = dt + Math.floor(((a.maxdt - a.dt) + (b.maxdt - b.dt)) / 2);
+    assert(dt > 0);
+    assert(maxdt >= dt);
+    var c = new Bacteria(t, dt, maxdt, a.color);
+    return c;
 }
