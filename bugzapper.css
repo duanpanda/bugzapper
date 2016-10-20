@@ -28,8 +28,8 @@ h1 {
 }
 
 .controls {
-    text-align: left;
-    width: 550px;
+    text-align: center;
+    width: 700px;
     margin: 5px;
     float: left;
 }
@@ -55,7 +55,7 @@ h1 {
 
 .controls label {
     display: inline-block;
-    width: 90px;
+    width: 150px;
     color: pink;
     font-weight: bold;
 }
@@ -71,7 +71,7 @@ a:link, a:visited {
 }
 
 .controls .slider {
-    margin-left: 94px;
+    margin-left: 70px;
     display: block;
 }
 
