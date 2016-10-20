@@ -37,7 +37,6 @@ var diskColorIndex = 7;
 var gameTicks = 1;
 var maxInterval = 30;
 var nextTick =  maxInterval; // next tick to generate a new Bacteria
-var maxNumBact = 10;
 var maxDt = 15;
 var intervalId = 0;
 var bactTickInterval = 2;	// control the bacteria's speed of growth
@@ -151,8 +150,7 @@ function initObjData()
     disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
     objs.push(disk);
 
-    addOneStdBact();
-
+    addOneStdBact_updateGLBuf(getRandomInt(0, 360));
     rebuildGLBuf(objs);
 }
 
@@ -197,13 +195,12 @@ function updateGame()
 	return;
     }
     if (gameTicks == nextTick) {
-	addOneStdBact();
+	addOneStdBact_updateGLBuf(getRandomInt(0, 360));
 	nextTick = gameTicks + maxInterval;
     }
 
     // merge bacterias
     var newBactList = mergeBacterias();
-    // console.log(getBactThetaRanges(newBactList));
     // rebuild objs list
     bacterias = newBactList;
     objs = [disk].concat(bacterias);
@@ -366,6 +363,9 @@ function Bacteria(t, dt, maxdt, color)
 	this.thetaEnd = rangePair[1];
 	this.thetaBeginForMerge = t - dt;
 	this.thetaEndForMerge = (t + dt) % 360;
+	if (this.thetaBeginForMerge > this.thetaEndForMerge) {
+	    this.thetaBeginForMerge -= 360;
+	}
     };
 
     this.setColor = function(c) {
@@ -454,7 +454,12 @@ function Bacteria(t, dt, maxdt, color)
     this.isOverlap = function(b) {
 	var ra = [this.thetaBeginForMerge, this.thetaEndForMerge];
 	var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
-	return !(ra[1] < rb[0] || rb[1] < ra[0]);
+	var rbDown = [rb[0] - 360, rb[1] - 360];
+	var rbUp = [rb[0] + 360, rb[1] + 360];
+	var bSeparate1 = ra[1] < rb[0] || rb[1] < ra[0];
+	var bSeparate2 = ra[1] < rbDown[0] || rbDown[1] < ra[0];
+	var bSeparate3 = ra[1] < rbUp[0] || rbUp[1] < ra[1];
+	return !(bSeparate1 && bSeparate2 && bSeparate3);
     };
 }
 
@@ -544,12 +549,17 @@ function getRandomColor()
     return vec3(Math.random(), Math.random(), Math.random());
 }
 
-function addOneStdBact()
+function addOneStdBact(t)
 {
-    var b = new Bacteria(getRandomInt(0, 360), 1, maxDt, getRandomColor());
-    b.setTheta(getRandomInt(0, 360));
+    var b = new Bacteria(t, 1, maxDt, getRandomColor());
     b.activate();
     addBact(b);
+}
+
+function addOneStdBact_updateGLBuf(t)
+{
+    addOneStdBact(t);
+    rebuildGLBuf(objs);
 }
 
 function addBact(b)
@@ -558,7 +568,6 @@ function addBact(b)
     console.log('bacterias.length=', bacterias.length);
     objs.push(b);
     console.log('objs.length=', objs.length);
-    rebuildGLBuf(objs);
 }
 
 function removeBact(b)
@@ -611,7 +620,7 @@ function resetGame()
     isLost = false;
     setScore(0);
     clearAllBact();
-    addOneStdBact();
+    addOneStdBact_updateGLBuf(getRandomInt(0, 360));
     gameTicks = 1;
     var intervalSlider = document.getElementById("interval-slider");
     maxInterval = intervalSlider.valueAsNumber;
@@ -644,8 +653,7 @@ function setScore(a)
 
 function mergeBacterias()
 {
-    var bacterias = objs.slice(bactBegin, bactBegin + maxNumBact);
-    bacterias.sort(compareBact); // changes bacterias object
+    bacterias.sort(compareBact); // it changes bacterias object
     var stack = [bacterias[0]];
     for (var i = 1; i < bacterias.length; i++) {
 	var top = stack[stack.length - 1];
@@ -653,13 +661,13 @@ function mergeBacterias()
 	    top.isActive && !top.isPoisoned &&
 	    top.isOverlap(bacterias[i])) {
 	    var a, b;
-	    if (top.dt > bacterias[i].dt) {
+	    if (top.dt >= bacterias[i].dt) {
 		a = top; b = bacterias[i];
 	    }
 	    else {
 		a = bacterias[i]; b = top;
 	    }
-	    var c = eat(a, b);
+	    var c = eat(a, b);	// order: a eats b, c uses a's color
 	    stack.pop();
 	    stack.push(c);
 	    a.reset();
@@ -673,12 +681,34 @@ function mergeBacterias()
     return stack;
 }
 
-// input a and b are linear ranges.
-// output a linear range (i.e. no cross 359 degrees and 0 degree boarder)
+// ranges a and b are in the range [-359, 359]
+// a[0] < a[1], b[0] < b[1]
 function merge_range(a, b)
 {
-    var newStart = a[0] < b[0] ? a[0] : b[0];
-    var newEnd = a[1] > b[1] ? a[1] : b[1];
+    assert(a[0] < a[1]);
+    assert(b[0] < b[1]);
+    assert(a[0] >= -359);
+    assert(a[1] <= 359);
+    assert(b[0] >= -359);
+    assert(b[1] <= 359);
+    var b1 = [b[0] - 360, b[1] - 360];
+    var b2 = [b[0] + 360, b[1] + 360];
+    var bArray = [b, b1, b2];
+    var c;
+    for (var i = 0; i < bArray.length; i++) {
+	var isSeparate = a[1] < bArray[i][0] || bArray[i][1] < a[0];
+	if (!isSeparate) {
+	    c = bArray[i];
+	    break;
+	}
+    }
+    assert(c != undefined);
+    var newStart = a[0] < c[0] ? a[0] : c[0];
+    var newEnd = a[1] > c[1] ? a[1] : c[1];
+    if (newEnd - newStart >= 360) {
+	newStart = 0;
+	newEnd = 360;
+    }
     return [newStart, newEnd];
 }
 
@@ -709,14 +739,13 @@ function eat(a, b)
     console.log('rb', rb);
     var rc = merge_range(ra, rb);
     console.log(rc);
+    // assure this range difference is an odd number, so the GL buffer
+    // calculation can be correct later
     if ((rc[1] - rc[0]) % 2 == 1) {
 	rc[0] -= 1;
     }
     var dt = (rc[1] - rc[0]) / 2;
-    var t = rc[0] + dt;
-    if (t < 0) {
-	t += 360;
-    }
+    var t = rd_rem(rc[0] + dt, 360);
     console.log(t);
     var maxdt = dt + Math.floor(((a.maxdt - a.dt) + (b.maxdt - b.dt)) / 2);
     assert(dt > 0);
