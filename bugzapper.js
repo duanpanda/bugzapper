@@ -606,7 +606,7 @@ function countGrownUps()
 {
     var c = 0;
     for (var i = 0; i < bacterias.length; i++) {
-	if (bacterias[i].isActive && bacterias[i].isGrownUp()) {
+	if (bacterias[i].isActive && !bacterias[i].isPoisoned && bacterias[i].isGrownUp()) {
 	    c++;
 	}
     }
