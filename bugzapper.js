@@ -156,12 +156,10 @@ function initObjData()
 {
     disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
     objs.push(disk);
-    addOneStdBact(getRandomInt(0, 360));
-    // addOneStdBact(31);
-    // addOneStdBact(0);
-    var p = new Particles(rCrustOuter, 30);
+    var p = new Particles(rCrustInner, 30);
     particles.push(p);
     objs.push(p);
+    addOneStdBact(getRandomInt(0, 360));
     rebuildGLBuf(objs);
 }
 
@@ -176,6 +174,19 @@ function addGLObj(obj)
     gl.bufferSubData(gl.ARRAY_BUFFER, vIndex * BYTES_PER_VERTEX_COLOR, c);
 
     vIndex += obj.vertices.length;
+}
+
+// i references objs[i]
+function updateGLObj(i)
+{
+    var vi = getGLVIndex(i);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
+    var v = flatten(objs[i].vertices);
+    gl.bufferSubData(gl.ARRAY_BUFFER, vi * BYTES_PER_VERTEX, v);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuf);
+    var c = flatten(objs[i].colors);
+    gl.bufferSubData(gl.ARRAY_BUFFER, vi * BYTES_PER_VERTEX_COLOR, c);
 }
 
 function rebuildGLBuf(objs)
@@ -218,8 +229,6 @@ function updateGame()
     bacterias = newBactList;
     objs = [disk].concat(bacterias);
     objs = objs.concat(particles);
-    // rebuild GL buffers
-    rebuildGLBuf(objs);
 
     // update each bacteria's internal state
     for (i = 0; i < bacterias.length; i++) {
@@ -234,6 +243,18 @@ function updateGame()
 	    continue;
 	}
 	particles[i].update();
+	// updateGLObj(1 + i);	// in objs[], the ith particle is at 1+i position
+    }
+    // rebuild GL buffers
+    rebuildGLBuf(objs);
+}
+
+// Returns vertex index in GL vertex buffer (?th vertex it is)
+function getGLVIndex(i)
+{
+    var vi = 0;
+    for (var j = 0; j < i; j++) {
+	vi += objs[i].vertices.legth;
     }
 }
 
@@ -261,14 +282,18 @@ function assert(condition, message)
     }
 }
 
-/**
- * Return a random integer between min (included) and max (excluded).
- */
+// Return a random integer between min (included) and max (excluded).
 function getRandomInt(min, max)
 {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
+}
+
+// Return a random float between min (included) and max (excluded).
+function getRandomArbitrary(min, max)
+{
+    return Math.random() * (max - min) + min;
 }
 
 function GameObj()
@@ -824,9 +849,20 @@ function Particles(r, theta)
 	    this.vertices[i] = uvw;
 	}
     };
-    this._genPoints();
+    this._genPoints();		// enerate this.vertices[]
     this.vCount = this.vertices.length;
-    this.setColor(vec3(0.9, 0.7, 0.2));
+    this.setColor(vec3(0.9, 0.7, 0.2)); // generate this.colors[]
+    this.velocities = [];
+    this._genVelocities = function() {
+	if (this.velocities.length != maxNumParticlePoints) {
+	    this.velocities = new Array(maxNumParticlePoints);
+	}
+	for (var i = 0; i < maxNumParticlePoints; i++) {
+	    this.velocities[i] = vec2(getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(0, 0.0005),
+				      getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(0, 0.00005));
+	}
+    };
+    this._genVelocities();	// generate this.velocities[]
     this.pointSize = 4;
     this.redraw = function(gl_vIndex) {
 	gl.uniform1f(pointSizeLoc, this.pointSize);
@@ -837,12 +873,18 @@ function Particles(r, theta)
 	if (!this.isActive) {
 	    return;
 	}
-	this.theta++;
+	// this.theta++;
 	if (gameTicks % 20 == 0) {
 	    this.pointSize--;
 	    if (this.pointSize == 0) {
 		this.inactivate();
 	    }
+	}
+	for (var i = 0; i < this.vertices.length; i++) {
+	    this.velocities[i][0] -= 0.0001;
+	    this.velocities[i][1] -= 0.0003;
+	    this.vertices[i][0] += this.velocities[i][0];
+	    this.vertices[i][1] += this.velocities[i][1];
 	}
     };
     this.inactivate = function() {
