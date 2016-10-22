@@ -47,12 +47,13 @@ var isWin = false;
 var isLost = false;
 var maxGrownUpsToLoseGame = 5;
 var maxNumParticlePoints = 80;
+var maxNumExplosions = 10;
 
 // game objects
 var objs = [];			// for GL, it references disk, bacterias, etc.
 var disk = null;
 var bacterias = [];
-var particles = [];
+var explosions = [];
 
 window.onload = function init()
 {
@@ -138,7 +139,7 @@ function onMouseDown(event) {
 	if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
 	    if (!isFound) {
 		isFound = true;
-		bacterias[i].poisonIt();
+		bacterias[i].poisonIt(polar[0], polar[1]);
 		if (bacterias[i].isGrownUp()) {
 		    setScore(score + 2);
 		}
@@ -156,9 +157,11 @@ function initObjData()
 {
     disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
     objs.push(disk);
-    var p = new Particles(rCrustInner, 30);
-    particles.push(p);
-    objs.push(p);
+    for (var i = 0; i < maxNumExplosions; i++) {
+	var p = new Explosion();
+	explosions.push(p);
+	objs.push(p);
+    }
     addOneStdBact(getRandomInt(0, 360));
     rebuildGLBuf(objs);
 }
@@ -227,8 +230,8 @@ function updateGame()
     console.log('after merge: ' + rangeArrayToString(getBactThetaRanges(newBactList)));
     // rebuild objs list
     bacterias = newBactList;
-    objs = [disk].concat(bacterias);
-    objs = objs.concat(particles);
+    objs = [disk].concat(explosions);
+    objs = objs.concat(bacterias);
 
     // update each bacteria's internal state
     for (i = 0; i < bacterias.length; i++) {
@@ -238,13 +241,13 @@ function updateGame()
 	bacterias[i].update();
     }
 
-    for (i = 0; i < particles.length; i++) {
-	if (!particles[i].isActive) {
+    for (i = 0; i < explosions.length; i++) {
+	if (!explosions[i].isActive) {
 	    continue;
 	}
-	particles[i].update();
-	// updateGLObj(1 + i);	// in objs[], the ith particle is at 1+i position
+	explosions[i].update();
     }
+
     // rebuild GL buffers
     rebuildGLBuf(objs);
 }
@@ -254,8 +257,9 @@ function getGLVIndex(i)
 {
     var vi = 0;
     for (var j = 0; j < i; j++) {
-	vi += objs[i].vertices.legth;
+	vi += objs[j].vertices.length;
     }
+    return vi;
 }
 
 function render()
@@ -455,8 +459,16 @@ function Bacteria(t, dt, maxdt, color)
 	}
     };
 
-    this.poisonIt = function() {
+    this.poisonIt = function(r, thetaRadian) {
 	this.isPoisoned = true;
+	var i = getIdleExplosionIndex();
+	if (i != -1) {
+	    var e = explosions[i];
+	    e.activate();
+	    e.setPosition(rCrustInner + (rCrustOuter - rCrustInner) / 2, thetaRadian);
+	    e.setColor(this.color);
+	    updateGLObj(1 + i);
+	}
     };
 
     // must be called after calling _setVisiblePart()
@@ -635,6 +647,9 @@ function clearAllBact()
     bacterias = [];
     objs = [];
     objs.push(disk);
+    for (var i = 0; i < maxNumExplosions; i++) {
+	objs.push(explosions[i]);
+    }
 }
 
 function isAllBactClear()
@@ -826,18 +841,22 @@ function rangeArrayToString(rr)
     return s;
 }
 
-function Particles(r, theta)
+function Explosion()
 {
     GameObj.call(this);
-    this.theta = theta;
+    this.theta = 0;
     this.drawMode = gl.POINTS;
-    this._genPoints = function() {
+    this.velocities = [];
+    this.pointSize = 4;
+    this.isActive = false;
+
+    this._genPoints = function(r) {
 	if (this.vertices.length != maxNumParticlePoints) {
 	    this.vertices = new Array(maxNumParticlePoints);
 	}
-	var tu = theta * DEGREE_TO_RADIAN;
-	var tv = (theta - 1) * DEGREE_TO_RADIAN;
-	var tw = (theta + 1) * DEGREE_TO_RADIAN;
+	var tu = 0.0;
+	var tv = 0.0 - DEGREE_TO_RADIAN;
+	var tw = 0.0 + DEGREE_TO_RADIAN;
 	var u = [r * Math.cos(tu), r * Math.sin(tu)];
 	var v = [(r+0.01) * Math.cos(tv), (r+0.01) * Math.sin(tv)];
 	var w = [(r+0.01) * Math.cos(tw), (r+0.01) * Math.sin(tw)];
@@ -849,31 +868,35 @@ function Particles(r, theta)
 	    this.vertices[i] = uvw;
 	}
     };
-    this._genPoints();		// enerate this.vertices[]
-    this.vCount = this.vertices.length;
-    this.setColor(vec3(0.9, 0.7, 0.2)); // generate this.colors[]
-    this.velocities = [];
+
     this._genVelocities = function() {
 	if (this.velocities.length != maxNumParticlePoints) {
 	    this.velocities = new Array(maxNumParticlePoints);
 	}
 	for (var i = 0; i < maxNumParticlePoints; i++) {
-	    this.velocities[i] = vec2(getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0002, 0.0005),
-				      getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0004, 0.0001));
+	    var vx = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0002, 0.0005);
+	    var vy = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0004, 0.0001);
+	    this.velocities[i] = vec2(vx, vy);
 	}
     };
-    this._genVelocities();	// generate this.velocities[]
-    this.pointSize = 4;
+
+    this.setPosition = function(r, thetaRadian) {
+	this.theta = thetaRadian * RADIAN_TO_DEGREE;
+	this._genPoints(r);	// generate this.vertices[]
+	this.vCount = this.vertices.length;
+	this._genVelocities();	// generate this.velocities[]
+    };
+
     this.redraw = function(gl_vIndex) {
 	gl.uniform1f(pointSizeLoc, this.pointSize);
 	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
 	gl.drawArrays(this.drawMode, gl_vIndex + this.beginIndex, this.vCount);
     };
+
     this.update = function() {
 	if (!this.isActive) {
 	    return;
 	}
-	// this.theta++;
 	if (gameTicks % 10 == 0) {
 	    this.pointSize--;
 	    if (this.pointSize == 0) {
@@ -887,7 +910,23 @@ function Particles(r, theta)
 	    this.velocities[i][1] -= 0.0004;
 	}
     };
+
+    this.activate = function() {
+	this.isActive = true;
+	this.pointSize = 4;
+    };
+
     this.inactivate = function() {
 	this.isActive = false;
     };
+}
+
+function getIdleExplosionIndex()
+{
+    for (var i = 0; i < explosions.length; i++) {
+	if (!explosions.isActive) {
+	    return i;
+	}
+    }
+    return -1;
 }
