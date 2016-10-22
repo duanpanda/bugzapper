@@ -836,11 +836,11 @@ function Particles(r, theta)
 	    this.vertices = new Array(maxNumParticlePoints);
 	}
 	var tu = theta * DEGREE_TO_RADIAN;
-	var tv = (theta - 5) * DEGREE_TO_RADIAN;
-	var tw = (theta + 5) * DEGREE_TO_RADIAN;
+	var tv = (theta - 1) * DEGREE_TO_RADIAN;
+	var tw = (theta + 1) * DEGREE_TO_RADIAN;
 	var u = [r * Math.cos(tu), r * Math.sin(tu)];
-	var v = [(r+0.15) * Math.cos(tv), (r+0.15) * Math.sin(tv)];
-	var w = [(r+0.15) * Math.cos(tw), (r+0.15) * Math.sin(tw)];
+	var v = [(r+0.01) * Math.cos(tv), (r+0.01) * Math.sin(tv)];
+	var w = [(r+0.01) * Math.cos(tw), (r+0.01) * Math.sin(tw)];
 	for (var i = 0; i < maxNumParticlePoints; i++) {
 	    var s1 = Math.random();
 	    var uv = mix(u, v, s1);
@@ -858,8 +858,8 @@ function Particles(r, theta)
 	    this.velocities = new Array(maxNumParticlePoints);
 	}
 	for (var i = 0; i < maxNumParticlePoints; i++) {
-	    this.velocities[i] = vec2(getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(0, 0.0005),
-				      getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(0, 0.00005));
+	    this.velocities[i] = vec2(getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0002, 0.0005),
+				      getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0004, 0.0001));
 	}
     };
     this._genVelocities();	// generate this.velocities[]
@@ -874,17 +874,17 @@ function Particles(r, theta)
 	    return;
 	}
 	// this.theta++;
-	if (gameTicks % 20 == 0) {
+	if (gameTicks % 10 == 0) {
 	    this.pointSize--;
 	    if (this.pointSize == 0) {
 		this.inactivate();
 	    }
 	}
 	for (var i = 0; i < this.vertices.length; i++) {
-	    this.velocities[i][0] -= 0.0001;
-	    this.velocities[i][1] -= 0.0003;
 	    this.vertices[i][0] += this.velocities[i][0];
 	    this.vertices[i][1] += this.velocities[i][1];
+	    this.velocities[i][0] -= 0.0002;
+	    this.velocities[i][1] -= 0.0004;
 	}
     };
     this.inactivate = function() {
