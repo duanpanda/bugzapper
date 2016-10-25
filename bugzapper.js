@@ -46,7 +46,7 @@ var updateGameDelay = 30;	// milliseconds between each call of updateGame()
 var isWin = false;
 var isLost = false;
 var maxGrownUpsToLoseGame = 5;
-var maxNumParticlePoints = 80;
+var maxNumParticlePoints = 100;
 var maxNumExplosions = 10;
 
 // game objects
@@ -373,6 +373,7 @@ function Bacteria(t, dt, maxdt, color)
     this.isActive = false;
     this.isPoisoned = false;
     this.poisonDt = 0;		// this.poisonDt can grow from 0 to this.dt
+    this.poisonTheta = t;
     this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
 
     this._genPoints = function() {
@@ -405,7 +406,9 @@ function Bacteria(t, dt, maxdt, color)
 	var middleIndex = Math.floor(numThetas / 2) * 2;
 	this.beginIndex = middleIndex - dt * 2;
 	this.vCount = (2 * dt + 1) * 2;
-	this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+	if (!this.poisoned) {
+	    this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+	}
 
 	var t = this.theta;
 	var rangePair = rd_pair_rem([t - dt, t + dt], 360);
@@ -450,17 +453,17 @@ function Bacteria(t, dt, maxdt, color)
 	if (this.isPoisoned) {
 	    olddt = this.poisonDt;
 	    newdt = olddt + 1;
-	    if (newdt < this.dt) {
-		this._setPoisonedVisibleParts(newdt);
-	    }
-	    else if (newdt == this.dt) {
-		this.reset();
-	    }
+	    // when visible parts are empty, reset this bacteria
+	    this._setPoisonedVisibleParts(newdt);
 	}
     };
 
     this.poisonIt = function(r, thetaRadian) {
+	if (this.isPoisoned) {
+	    return;
+	}
 	this.isPoisoned = true;
+	this.poisonTheta = Math.round(thetaRadian * RADIAN_TO_DEGREE);
 	var i = getIdleExplosionIndex();
 	if (i != -1) {
 	    var e = explosions[i];
@@ -471,19 +474,42 @@ function Bacteria(t, dt, maxdt, color)
 	}
     };
 
-    // must be called after calling _setVisiblePart()
+    // before calling this method, _setVisiblePart() must be called
     this._setPoisonedVisibleParts = function(poisonDt) {
 	this.poisonDt = poisonDt; // 1 degree offset ~ 2 vertices offset
 	var numThetas = Math.floor(this.vertices.length / 2);
-	var middleThetaIndex = Math.floor(numThetas / 2);
-	var a = middleThetaIndex - poisonDt;
-	var b = middleThetaIndex + poisonDt;
-	var endThetaIndex = middleThetaIndex + this.dt;
+	assert(numThetas % 2 == 1, "there must be odd number of thetas");
+	var endThetaIndex = numThetas;
+	var tmpPoisonTheta = this.poisonTheta;
+	if (tmpPoisonTheta < this.thetaBegin) {
+	    tmpPoisonTheta += 360;
+	}
+	var poisonThetaIndex = tmpPoisonTheta - this.thetaBegin;
+	var a = poisonThetaIndex - poisonDt;
+	var b = poisonThetaIndex + poisonDt;
 	var av = this._thetaIndex_to_vIndex(a);
+	if (av < this.beginIndex + 2) {
+	    av = this.beginIndex + 2;
+	}
 	var bv = this._thetaIndex_to_vIndex(b);
+	// endVIndex is not included when drawing is performed
 	var endVIndex = this._thetaIndex_to_vIndex(endThetaIndex);
-	this.visibleParts[0] = [this.beginIndex, av];
-	this.visibleParts[1] = [bv, endVIndex];
+	if (bv > endVIndex - 2) {
+	    bv = endVIndex;
+	}
+	if (this.beginIndex + 2 == av && bv < endVIndex) {
+	    this.visibleParts = [[bv, endVIndex]];
+	}
+	else if (this.beginIndex + 2 < av && bv == endVIndex) {
+	    this.visibleParts = [[this.beginIndex, av]];
+	}
+	else if (this.beginIndex + 2 < av && bv < endVIndex) {
+	    this.visibleParts = [[this.beginIndex, av], [bv, endVIndex]];
+	}
+	else if (this.beginIndex + 2 == av && bv == endVIndex) {
+	    this.visibleParts = [];
+	    this.reset();
+	}
     };
 
     this.redraw = function(gl_vIndex) {
@@ -816,7 +842,6 @@ function eat(a, b)
     var dt = (rc[1] - rc[0]) / 2;
     var t = rd_rem(rc[0] + dt, 360);
     console.log(t);
-    // var maxdt = dt + Math.floor(((a.maxdt - a.dt) + (b.maxdt - b.dt)) / 2);
     var maxdt = dt < 15 ? 15 : dt;
     if (dt == 0) {
 	t = 0;
