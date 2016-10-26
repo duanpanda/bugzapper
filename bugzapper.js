@@ -395,7 +395,7 @@ function Disk(x, y, r, c)
 }
 
 // pre: 0 <= t0 <= 359, 0 <= dt <= 359, 0 <= maxdt <= 359, integers
-function Bacteria(t, dt, maxdt, color)
+function Bacteria(t, dt, maxdt, color, gameTick)
 {
     assert(t >= 0 && t <= 359, 'must: 0 <= t <= 359');
     assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
@@ -416,6 +416,7 @@ function Bacteria(t, dt, maxdt, color)
     this.poisonDt = 0;		// this.poisonDt can grow from 0 to this.dt
     this.poisonTheta = t;
     this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+    this.gameTick = gameTick;	// time of creation
 
     this._genPoints = function() {
 	var thetaCount = maxdt * 2 + 1;
@@ -676,7 +677,7 @@ function getRandomColor()
 
 function addOneStdBact(t)
 {
-    var b = new Bacteria(t, 1, maxDt, getRandomColor());
+    var b = new Bacteria(t, 1, maxDt, getRandomColor(), gameTicks);
     b.activate();
     addBact(b);
 }
@@ -756,8 +757,8 @@ function resetGame()
     isLost = false;
     setScore(0);
     clearAllBact();
-    addOneStdBact_updateGLBuf(getRandomInt(0, 360));
     gameTicks = 1;
+    addOneStdBact_updateGLBuf(getRandomInt(0, 360));
     var intervalSlider = document.getElementById("interval-slider");
     maxInterval = intervalSlider.valueAsNumber;
     nextTick = maxInterval;
@@ -801,7 +802,8 @@ function mergeBacterias()
 		stack[j].isActive && !stack[j].isPoisoned &&
 		stack[j].isOverlap(target)) {
 		var a, b;
-		if (stack[j].dt >= target.dt) {
+		assert(stack[j].gameTick != target.gameTick, "two bacterias cannot be created at the same time in this game");
+		if (stack[j].gameTick < target.gameTick) {
 		    a = stack[j]; b = target;
 		}
 		else {
@@ -901,7 +903,7 @@ function eat(a, b)
     }
     assert(dt > 0);
     assert(maxdt >= dt);
-    var c = new Bacteria(t, dt, maxdt, a.color);
+    var c = new Bacteria(t, dt, maxdt, a.color, a.gameTick);
     return c;
 }
 
