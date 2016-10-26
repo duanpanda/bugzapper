@@ -48,6 +48,7 @@ var isLost = false;
 var maxGrownUpsToLoseGame = 5;
 var maxNumParticlePoints = 100;
 var maxNumExplosions = 10;
+var maxBactTickInterval = 20;
 
 // game objects
 var objs = [];			// for GL, it references disk, bacterias, etc.
@@ -95,12 +96,12 @@ window.onload = function init()
     canvas.addEventListener("mousedown", onMouseDown);;
 
     var speedSlider = document.getElementById("speed-slider");
-    bactTickInterval = 11 - speedSlider.value;
+    bactTickInterval = maxBactTickInterval - speedSlider.value;
     speedSlider.onchange = function(event) {
 	// Or use event.srcElemtn.value and put it with number arithmetic
 	// expression and it can be coerced from a string to an integer
 	// automatically.
-	bactTickInterval = 11 - event.srcElement.value;
+	bactTickInterval = maxBactTickInterval - event.srcElement.value;
     };
     var intervalSlider = document.getElementById("interval-slider");
     maxInterval = intervalSlider.valueAsNumber;
@@ -204,52 +205,92 @@ function updateGame()
 {
     gameTicks++;
 
-    if (isAllBactClear()) {
-	nextTick = 0;		// will not generate new bacteria from now on
-	isWin = true;
-	console.log('YOU WIN');
-	endGame();
-	return;
+    if (isWin) {
+	gameWinUpdate();
     }
-    var numGrownUps = countGrownUps();
-    if (numGrownUps == maxGrownUpsToLoseGame) {
-	nextTick = 0;
-	isLost = true;
-	console.log('YOU LOSE');
-	endGame();
-	return;
-    }
-    if (gameTicks == nextTick) {
-	addOneStdBact_updateGLBuf(getRandomInt(0, 360));
-	nextTick = gameTicks + maxInterval;
+    else {
+	if (isLost) {
+	    gameLostUpdate();
+	}
+	else {
+	    // check if game runs into isWin state
+	    if (isAllBactClear()) {
+		nextTick = 0;		// will not generate new bacteria from now on
+		isWin = true;
+		console.log('YOU WIN');
+		return;
+	    }
+
+	    // check if game runs into isLost state
+	    var numGrownUps = countGrownUps();
+	    if (numGrownUps == maxGrownUpsToLoseGame) {
+		nextTick = 0;
+		isLost = true;
+		console.log('YOU LOSE');
+		return;
+	    }
+
+	    // if not win and not lost, then do the normal update
+
+	    // generate new bacteria
+	    if (gameTicks == nextTick) {
+		addOneStdBact_updateGLBuf(getRandomInt(0, 360));
+		nextTick = gameTicks + maxInterval;
+	    }
+
+	    // merge bacterias
+	    console.log('before merge: ' + rangeArrayToString(getBactThetaRanges(bacterias)));
+	    var newBactList = mergeBacterias();
+	    console.log('after merge: ' + rangeArrayToString(getBactThetaRanges(newBactList)));
+	    bacterias = newBactList;
+	    objs = [disk].concat(explosions);
+	    objs = objs.concat(bacterias);
+
+	    updateEachBacteria();
+	    updateEachExplosion();
+	}
     }
 
-    // merge bacterias
-    console.log('before merge: ' + rangeArrayToString(getBactThetaRanges(bacterias)));
-    var newBactList = mergeBacterias();
-    console.log('after merge: ' + rangeArrayToString(getBactThetaRanges(newBactList)));
-    // rebuild objs list
-    bacterias = newBactList;
-    objs = [disk].concat(explosions);
-    objs = objs.concat(bacterias);
+    // rebuild GL buffers
+    rebuildGLBuf(objs);
+}
 
-    // update each bacteria's internal state
-    for (i = 0; i < bacterias.length; i++) {
+function gameWinUpdate()
+{
+    updateEachBacteria();
+    updateEachExplosion();
+    if (isExplosionAnimDone()) {
+	endGame();
+    }
+}
+
+function gameLostUpdate()
+{
+    updateEachBacteria();
+    updateEachExplosion();
+    if (isExplosionAnimDone()) {
+	endGame();
+    }
+}
+
+function updateEachBacteria()
+{
+    for (var i = 0; i < bacterias.length; i++) {
 	if (!bacterias[i].isActive) {
 	    continue;
 	}
 	bacterias[i].update();
     }
+}
 
-    for (i = 0; i < explosions.length; i++) {
+function updateEachExplosion()
+{
+    for (var i = 0; i < explosions.length; i++) {
 	if (!explosions[i].isActive) {
 	    continue;
 	}
 	explosions[i].update();
     }
-
-    // rebuild GL buffers
-    rebuildGLBuf(objs);
 }
 
 // Returns vertex index in GL vertex buffer (?th vertex it is)
@@ -681,7 +722,7 @@ function clearAllBact()
 function isAllBactClear()
 {
     for (var i = 0; i < bacterias.length; i++) {
-	if (bacterias[i].isActive) {
+	if (bacterias[i].isActive && !bacterias[i].isPoisoned) {
 	    return false;
 	}
     }
@@ -699,6 +740,16 @@ function countGrownUps()
     return c;
 }
 
+function isExplosionAnimDone()
+{
+    for (var i = 0; i < explosions.length; i++) {
+	if (explosions[i].isActive) {
+	    return false;
+	}
+    }
+    return true;
+}
+
 function resetGame()
 {
     isWin = false;
@@ -711,7 +762,7 @@ function resetGame()
     maxInterval = intervalSlider.valueAsNumber;
     nextTick = maxInterval;
     var speedSlider = document.getElementById("speed-slider");
-    bactTickInterval = 11 - speedSlider.value;
+    bactTickInterval = maxBactTickInterval - speedSlider.value;
     var maxCompleteBactNum = document.getElementById("bactCountToLose");
     maxGrownUpsToLoseGame = maxCompleteBactNum.valueAsNumber;
     canvas.addEventListener("mousedown", onMouseDown);
