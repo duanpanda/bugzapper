@@ -457,7 +457,12 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 	this.thetaBegin = rangePair[0];
 	this.thetaEnd = rangePair[1];
 	this.thetaBeginForMerge = t - dt;
-	this.thetaEndForMerge = (t + dt) % 360;
+	if (t + dt == 360) {
+	    this.thetaEndForMerge = 360;
+	}
+	else {
+	    this.thetaEndForMerge = (t + dt) % 360;
+	}
 	if (this.thetaBeginForMerge > this.thetaEndForMerge) {
 	    this.thetaBeginForMerge -= 360;
 	}
@@ -790,43 +795,71 @@ function setScore(a)
     document.getElementById("score").innerHTML = score;
 }
 
+function devideBacterias()
+{
+    var healthy = [];
+    var dead = [];
+    for (var i = 0; i < bacterias.length; i++) {
+	if (bacterias[i].isActive && !bacterias[i].isPoisoned) {
+	    healthy.push(bacterias[i]);
+	}
+	else {
+	    dead.push(bacterias[i]);
+	}
+    }
+    return [healthy, dead];
+}
+
 function mergeBacterias()
 {
     bacterias.sort(compareBact); // it changes bacterias object
-    var stack = [bacterias[0]];
-    for (var i = 1; i < bacterias.length; i++) {
-	var target = bacterias[i];
-	var isMerged = false;
-	for (var j = stack.length - 1; j >= 0; j--) {
-	    if (target.isActive && !target.isPoisoned &&
-		stack[j].isActive && !stack[j].isPoisoned &&
-		stack[j].isOverlap(target)) {
-		var a, b;
-		assert(stack[j].gameTick != target.gameTick, "two bacterias cannot be created at the same time in this game");
-		if (stack[j].gameTick < target.gameTick) {
-		    a = stack[j]; b = target;
-		}
-		else {
-		    a = target; b = stack[j];
-		}
-		var c = eat(a, b);	// order: a eats b, c uses a's color
-		a.reset();
-		b.reset();
-		c.activate();
+    var healthy, dead;
+    [healthy, dead] = devideBacterias();
+    var stack = [healthy[0]];
+    for (var i = 1; i < healthy.length; i++) {
+	var target = healthy[i];
+	var top = stack[stack.length - 1];
+	if (top.isOverlap(target)) {
+	    var a, b;
+	    [a, b] = sortBactsByAge(top, target);
+	    var c = eat(a, b);	// order: a eats b, c uses a's color
+	    a.reset();
+	    b.reset();
+	    c.activate();
 
-		stack.splice(j, 1, c);
-		target = stack[j];
-		isMerged = true;
-	    }
-	    else {
-		if (!isMerged) {
-		    stack.push(target);
-		    break;
-		}
-	    }
+	    stack.pop();
+	    stack.push(c);
+	}
+	else {
+	    stack.push(target);
 	}
     }
+
+    if (stack.length > 1 && stack[0].isOverlap(stack[stack.length - 1]))
+    {
+	[a, b] = sortBactsByAge(stack[0], stack[stack.length - 1]);
+	c = eat(a, b);
+	a.reset();
+	b.reset();
+	c.activate();
+	stack.pop();		// remove stack[stack.length - 1]
+	stack.splice(0, 1);	// remove stack[0]
+	stack.unshift(c);	// add c to the front of stack
+    }
+
+    stack = stack.concat(dead);
     return stack;
+}
+
+function sortBactsByAge(a, b)
+{
+    assert(a.gameTick != b.gameTick, "two bacterias cannot be created at the same time in this game");
+    if (a.gameTick < b.gameTick) {
+	return [a, b];
+    }
+    else {
+	return [b, a];
+    }
 }
 
 // ranges a and b are in the range [-359, 359]
@@ -887,7 +920,7 @@ function eat(a, b)
     console.log('rb', rb);
     var rc = merge_range(ra, rb);
     console.log(rc);
-    // assure this range difference is an odd number, so the GL buffer
+    // assure this range difference is an even number, so the GL buffer
     // calculation can be correct later
     if ((rc[1] - rc[0]) % 2 == 1) {
 	rc[0] -= 1;
@@ -896,7 +929,7 @@ function eat(a, b)
     var t = rd_rem(rc[0] + dt, 360);
     console.log(t);
     var maxdt = dt < 15 ? 15 : dt;
-    if (dt == 0) {
+    if (dt == 0 || dt == 180) {
 	t = 0;
 	dt = 180;
 	maxtdt = 180;
