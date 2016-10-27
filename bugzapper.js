@@ -211,7 +211,7 @@ function updateGame()
 
 	    // check if game runs into isLost state
 	    var numGrownUps = countGrownUps();
-	    if (numGrownUps == maxGrownUpsToLoseGame || bacterias.length == 1 && bacterias[0].dt == 180) {
+	    if (numGrownUps == maxGrownUpsToLoseGame || isFullCircleBact()) {
 		nextTick = 0;
 		isLost = true;
 		console.log('YOU LOSE');
@@ -778,26 +778,30 @@ function setScore(a)
     document.getElementById("score").innerHTML = score;
 }
 
-function devideBacterias()
+function divideBacterias()
 {
     var healthy = [];
+    var poisoned = [];
     var dead = [];
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive && !bacterias[i].isPoisoned) {
 	    healthy.push(bacterias[i]);
 	}
+	else if (bacterias[i].isActive && bacterias[i].isPoisoned) {
+	    poisoned.push(bacterias[i]);
+	}
 	else {
 	    dead.push(bacterias[i]);
 	}
     }
-    return [healthy, dead];
+    return [healthy, poisoned, dead];
 }
 
 function mergeBacterias()
 {
     bacterias.sort(compareBact); // it changes bacterias object
-    var healthy, dead;
-    [healthy, dead] = devideBacterias();
+    var healthy, poisoned, dead;
+    [healthy, poisoned, dead] = divideBacterias();
     var stack = [healthy[0]];
     for (var i = 1; i < healthy.length; i++) {
 	var target = healthy[i];
@@ -824,8 +828,7 @@ function mergeBacterias()
 	stack.unshift(c);	// add c to the front of stack
     }
 
-    // stack = stack.concat(dead);
-    // the dead are discarded
+    stack = stack.concat(poisoned); // discard the dead
     return stack;
 }
 
@@ -1050,4 +1053,14 @@ function getRandomBactPosition()
 	t = ranges[getRandomInt(0, ranges.length)][1];
     }
     return t;
+}
+
+function isFullCircleBact()
+{
+    for (var i = 0; i < bacterias.length; i++) {
+	if (bacterias[i].isActive && !bacterias[i].isPoisoned && bacterias[i].dt == 180) {
+	    return true;
+	}
+    }
+    return false;
 }
