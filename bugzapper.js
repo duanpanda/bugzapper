@@ -984,8 +984,8 @@ function Explosion()
 	    this.velocities = new Array(maxNumParticlePoints);
 	}
 	for (var i = 0; i < maxNumParticlePoints; i++) {
-	    var vx = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0002, 0.0005);
-	    var vy = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0004, 0.0001);
+	    var vx = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0001, 0.0007);
+	    var vy = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0003, 0.0003);
 	    this.velocities[i] = vec2(vx, vy);
 	}
     };
