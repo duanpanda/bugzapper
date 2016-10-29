@@ -35,7 +35,7 @@ var isWin = false;
 var isLost = false;
 var maxGrownUpsToLoseGame = 5;
 var maxNumParticlePoints = 100;
-var maxNumExplosions = 10;
+var maxNumExplosions = 5;
 var maxBactTickInterval = 20;
 
 // game objects
@@ -1077,6 +1077,8 @@ function Explosion()
     this.inactivate = function() {
 	this.isActive = false;
     };
+
+    this.setPosition(rCrustInner, 0.0);
 }
 
 function getIdleExplosionIndex()
