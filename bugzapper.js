@@ -129,8 +129,7 @@ function onMouseDown(event) {
 		bacterias[i].poisonIt(polar[1]);
 		if (bacterias[i].isGrownUp()) {
 		    setScore(score + 2);
-		}
-		else {
+		} else {
 		    setScore(score + 10);
 		}
 		break;
@@ -188,12 +187,10 @@ function updateGame() {
 
     if (isWin) {
 	gameWinUpdate();
-    }
-    else {
+    } else {
 	if (isLost) {
 	    gameLostUpdate();
-	}
-	else {
+	} else {
 	    // check if game runs into isWin state
 	    if (isAllBactClear()) {
 		nextTick = 0;		// will not generate new bacteria from now on
@@ -437,8 +434,7 @@ function Bacteria(t, dt, maxdt, color, gameTick) {
 	this.thetaBeginForMerge = t - dt;
 	if (t + dt == 360) {
 	    this.thetaEndForMerge = 360;
-	}
-	else {
+	} else {
 	    this.thetaEndForMerge = (t + dt) % 360;
 	}
 	if (this.thetaBeginForMerge > this.thetaEndForMerge) {
@@ -561,8 +557,7 @@ function Bacteria(t, dt, maxdt, color, gameTick) {
 	else if (bLeft < pLeft && pRight >= bRight) {
 	    assert(p > middle, 'poisonThetaIndex > middle');
 	    theta_ranges = [[bLeft, pLeft]];
-	}
-	else {			// bLeft >= pLeft && pRight >= bRight
+	} else {			// bLeft >= pLeft && pRight >= bRight
 	    theta_ranges = [];
 	}
 
@@ -674,8 +669,7 @@ function isInBacteria(point, r1, r2, theta1, theta2) {
 function isInRange(a, begin, end) {
     if (begin <= end) {
 	return a >= begin && a <= end;
-    }
-    else {
+    } else {
 	var ranges = split_circular_ranges([begin, end], 360);
 	return a >= ranges[0][0] && a <= ranges[0][1] ||
 	    a >= ranges[1][0] && a <= ranges[1][1];
@@ -794,8 +788,7 @@ function divideBacterias() {
 	}
 	else if (bacterias[i].isActive && bacterias[i].isPoisoned) {
 	    poisoned.push(bacterias[i]);
-	}
-	else {
+	} else {
 	    dead.push(bacterias[i]);
 	}
     }
@@ -817,8 +810,7 @@ function mergeBacterias() {
 
 	    stack.pop();
 	    stack.push(c);
-	}
-	else {
+	} else {
 	    stack.push(target);
 	}
     }
@@ -840,8 +832,7 @@ function sortBactsByAge(a, b) {
     assert(a.gameTick != b.gameTick, "two bacterias cannot be created at the same time in this game");
     if (a.gameTick < b.gameTick) {
 	return [a, b];
-    }
-    else {
+    } else {
 	return [b, a];
     }
 }
