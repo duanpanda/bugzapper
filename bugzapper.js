@@ -238,11 +238,7 @@ function gameWinUpdate() {
 }
 
 function gameLostUpdate() {
-    updateEachBacteria();
-    updateEachExplosion();
-    if (isExplosionAnimDone()) {
-	endGame();
-    }
+    gameWinUpdate();
 }
 
 function updateEachBacteria() {
@@ -532,8 +528,7 @@ function Bacteria(t, dt, maxdt, color, gameTick) {
 	var tmpPoisonTheta = this.poisonTheta;
 	if (tmpPoisonTheta > this.theta + this.dt) {
 	    tmpPoisonTheta -= 360;
-	}
-	else if (tmpPoisonTheta < this.theta - this.dt) {
+	} else if (tmpPoisonTheta < this.theta - this.dt) {
 	    tmpPoisonTheta += 360;
 	}
 
@@ -549,12 +544,10 @@ function Bacteria(t, dt, maxdt, color, gameTick) {
 	var theta_ranges;
 	if (bLeft < pLeft && pRight < bRight) {
 	    theta_ranges = [[bLeft, pLeft], [pRight, bRight]];
-	}
-	else if (bLeft >= pLeft && pRight < bRight) {
+	} else if (bLeft >= pLeft && pRight < bRight) {
 	    assert(p < middle, 'poisonThetaIndex < middle');
 	    theta_ranges = [[pRight, bRight]];
-	}
-	else if (bLeft < pLeft && pRight >= bRight) {
+	} else if (bLeft < pLeft && pRight >= bRight) {
 	    assert(p > middle, 'poisonThetaIndex > middle');
 	    theta_ranges = [[bLeft, pLeft]];
 	} else {			// bLeft >= pLeft && pRight >= bRight
@@ -635,8 +628,7 @@ function split_circular_ranges(pair, divisor) {
     assert(b >= 0 && b <= 359, 'must: 0 <= b <= 359');
     if (a <= b) {
 	return [[a, b]];
-    }
-    else if (a > b) {
+    } else if (a > b) {
 	return [[a, divisor], [0, b]];
     }
 }
@@ -765,8 +757,7 @@ function resetGame() {
 function endGame() {
     if (isWin) {
 	document.getElementById("win-or-lose").innerHTML = "YOU WIN";
-    }
-    else if (isLost) {
+    } else if (isLost) {
 	document.getElementById("win-or-lose").innerHTML = "YOU LOSE";
     }
     window.clearInterval(intervalId);
@@ -785,8 +776,7 @@ function divideBacterias() {
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive && !bacterias[i].isPoisoned) {
 	    healthy.push(bacterias[i]);
-	}
-	else if (bacterias[i].isActive && bacterias[i].isPoisoned) {
+	} else if (bacterias[i].isActive && bacterias[i].isPoisoned) {
 	    poisoned.push(bacterias[i]);
 	} else {
 	    dead.push(bacterias[i]);
