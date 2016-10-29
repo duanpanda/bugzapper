@@ -44,8 +44,7 @@ var disk = null;
 var bacterias = [];
 var explosions = [];
 
-window.onload = function init()
-{
+window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
 
     gl = WebGLUtils.setupWebGL(canvas);
@@ -141,8 +140,7 @@ function onMouseDown(event) {
 }
 
 
-function initObjData()
-{
+function initObjData() {
     disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
     objs.push(disk);
     for (var i = 0; i < maxNumExplosions; i++) {
@@ -154,8 +152,7 @@ function initObjData()
     rebuildGLBuf(objs);
 }
 
-function addGLObj(obj)
-{
+function addGLObj(obj) {
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
     var v = flatten(obj.vertices);
     gl.bufferSubData(gl.ARRAY_BUFFER, vIndex * BYTES_PER_VERTEX, v);
@@ -168,8 +165,7 @@ function addGLObj(obj)
 }
 
 // i references objs[i]
-function updateGLObj(i)
-{
+function updateGLObj(i) {
     var vi = getGLVIndex(i);
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
     var v = flatten(objs[i].vertices);
@@ -180,16 +176,14 @@ function updateGLObj(i)
     gl.bufferSubData(gl.ARRAY_BUFFER, vi * BYTES_PER_VERTEX_COLOR, c);
 }
 
-function rebuildGLBuf(objs)
-{
+function rebuildGLBuf(objs) {
     vIndex = 0;
     for (var i = 0; i < objs.length; i++) {
 	addGLObj(objs[i]);
     }
 }
 
-function updateGame()
-{
+function updateGame() {
     gameTicks++;
 
     if (isWin) {
@@ -238,8 +232,7 @@ function updateGame()
     rebuildGLBuf(objs);
 }
 
-function gameWinUpdate()
-{
+function gameWinUpdate() {
     updateEachBacteria();
     updateEachExplosion();
     if (isExplosionAnimDone()) {
@@ -247,8 +240,7 @@ function gameWinUpdate()
     }
 }
 
-function gameLostUpdate()
-{
+function gameLostUpdate() {
     updateEachBacteria();
     updateEachExplosion();
     if (isExplosionAnimDone()) {
@@ -256,8 +248,7 @@ function gameLostUpdate()
     }
 }
 
-function updateEachBacteria()
-{
+function updateEachBacteria() {
     for (var i = 0; i < bacterias.length; i++) {
 	if (!bacterias[i].isActive) {
 	    continue;
@@ -266,8 +257,7 @@ function updateEachBacteria()
     }
 }
 
-function updateEachExplosion()
-{
+function updateEachExplosion() {
     for (var i = 0; i < explosions.length; i++) {
 	if (!explosions[i].isActive) {
 	    continue;
@@ -277,8 +267,7 @@ function updateEachExplosion()
 }
 
 // Returns vertex index in GL vertex buffer (?th vertex it is)
-function getGLVIndex(i)
-{
+function getGLVIndex(i) {
     var vi = 0;
     for (var j = 0; j < i; j++) {
 	vi += objs[j].vertices.length;
@@ -286,8 +275,7 @@ function getGLVIndex(i)
     return vi;
 }
 
-function render()
-{
+function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     var vi = 0;	     // vertex index in vertex buffer and color buffer
     for (var i = 0; i < objs.length; i++) {
@@ -299,8 +287,7 @@ function render()
     window.requestAnimFrame(render);
 }
 
-function assert(condition, message)
-{
+function assert(condition, message) {
     if (!condition) {
 	message = message || "Assertion failed";
 	if (typeof Error !== "undefined") {
@@ -311,21 +298,18 @@ function assert(condition, message)
 }
 
 // Return a random integer between min (included) and max (excluded).
-function getRandomInt(min, max)
-{
+function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
 // Return a random float between min (included) and max (excluded).
-function getRandomArbitrary(min, max)
-{
+function getRandomArbitrary(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-function GameObj()
-{
+function GameObj() {
     this.vertices = [];
     this.colors = [];
     this.color = vec3(0.0, 0.0, 0.0);
@@ -350,8 +334,7 @@ function GameObj()
     this.isActive = true;
 }
 
-function Disk(x, y, r, c)
-{
+function Disk(x, y, r, c) {
     GameObj.call(this);
     this.x = x;
     this.y = y;
@@ -378,8 +361,7 @@ function Disk(x, y, r, c)
 }
 
 // pre: 0 <= t0 <= 359, 0 <= dt <= 359, 0 <= maxdt <= 359, integers
-function Bacteria(t, dt, maxdt, color, gameTick)
-{
+function Bacteria(t, dt, maxdt, color, gameTick) {
     assert(t >= 0 && t <= 359, 'must: 0 <= t <= 359');
     assert(dt >= 0 && dt <= 359, 'must: 0 <= dt <= 359');
     assert((typeof t === 'number') && Math.floor(t) === t, 'must: t is integer');
@@ -628,8 +610,7 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 /**
  * Return the positive remainder of dividend and positive divisor.
  */
-function rd_rem(dividend, divisor)
-{
+function rd_rem(dividend, divisor) {
     var r = dividend % divisor;
     if (r < 0) {
 	r += divisor;
@@ -643,8 +624,7 @@ function rd_rem(dividend, divisor)
 //
 // This function transform pair and return a new pair that uses positive index
 // to reference the elements in the cycle list.
-function rd_pair_rem(pair, divisor)
-{
+function rd_pair_rem(pair, divisor) {
     var a = rd_rem(pair[0], divisor);
     var b = rd_rem(pair[1], divisor);
     return [a, b];
@@ -653,8 +633,7 @@ function rd_pair_rem(pair, divisor)
 // return at most 2 ranges.
 // Example 1: pair = [15, 359], divisor = 360, return [[15, 359]].
 // Example 2: pair = [340, 25], divisor = 360, return [[340, 360], [0, 2]].
-function split_circular_ranges(pair, divisor)
-{
+function split_circular_ranges(pair, divisor) {
     var a = pair[0];
     var b = pair[1];
     assert(a >= 0 && a <= 359, 'must: 0 <= a <= 359');
@@ -668,8 +647,7 @@ function split_circular_ranges(pair, divisor)
 }
 
 // Output: r >= 0, theta is in a closed range [0, 2*PI].
-function xy_to_polar(x, y)
-{
+function xy_to_polar(x, y) {
     var theta = Math.atan(y / x);
     if ((y > 0 && x < 0) || (y < 0 && x < 0)) {
 	theta += Math.PI;
@@ -685,8 +663,7 @@ function xy_to_polar(x, y)
 // pre: r1 <= r2
 // pre: no matter who is larger, theta1 is the beginning of the range, theta2
 //	is the end of the range.
-function isInBacteria(point, r1, r2, theta1, theta2)
-{
+function isInBacteria(point, r1, r2, theta1, theta2) {
     var r = point[0];
     var t = point[1] * RADIAN_TO_DEGREE;
     return (r >= r1 && r <= r2) && isInRange(t, theta1, theta2);
@@ -694,8 +671,7 @@ function isInBacteria(point, r1, r2, theta1, theta2)
 
 // begin >= end is valid
 // begin < end is also valid
-function isInRange(a, begin, end)
-{
+function isInRange(a, begin, end) {
     if (begin <= end) {
 	return a >= begin && a <= end;
     }
@@ -706,8 +682,7 @@ function isInRange(a, begin, end)
     }
 }
 
-function isInRangeList(a, r)
-{
+function isInRangeList(a, r) {
     for (var i = 0; i < r.length; i++) {
 	if (isInRange(a, r[i][0], r[i][1])) {
 	    return true;
@@ -716,32 +691,27 @@ function isInRangeList(a, r)
     return false;
 }
 
-function getRandomColor()
-{
+function getRandomColor() {
     return vec3(Math.random(), Math.random(), Math.random());
 }
 
-function addOneStdBact(t)
-{
+function addOneStdBact(t) {
     var b = new Bacteria(t, 1, maxDt, getRandomColor(), gameTicks);
     b.activate();
     addBact(b);
 }
 
-function addOneStdBact_updateGLBuf(t)
-{
+function addOneStdBact_updateGLBuf(t) {
     addOneStdBact(t);
     rebuildGLBuf(objs);
 }
 
-function addBact(b)
-{
+function addBact(b) {
     bacterias.push(b);
     objs.push(b);
 }
 
-function clearAllBact()
-{
+function clearAllBact() {
     bacterias = [];
     objs = [];
     objs.push(disk);
@@ -750,8 +720,7 @@ function clearAllBact()
     }
 }
 
-function isAllBactClear()
-{
+function isAllBactClear() {
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive && !bacterias[i].isPoisoned) {
 	    return false;
@@ -760,8 +729,7 @@ function isAllBactClear()
     return true;
 }
 
-function countGrownUps()
-{
+function countGrownUps() {
     var c = 0;
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive && !bacterias[i].isPoisoned && bacterias[i].isGrownUp()) {
@@ -771,8 +739,7 @@ function countGrownUps()
     return c;
 }
 
-function isExplosionAnimDone()
-{
+function isExplosionAnimDone() {
     for (var i = 0; i < explosions.length; i++) {
 	if (explosions[i].isActive) {
 	    return false;
@@ -781,8 +748,7 @@ function isExplosionAnimDone()
     return true;
 }
 
-function resetGame()
-{
+function resetGame() {
     isWin = false;
     isLost = false;
     setScore(0);
@@ -802,8 +768,7 @@ function resetGame()
     intervalId = window.setInterval(updateGame, updateGameDelay);
 }
 
-function endGame()
-{
+function endGame() {
     if (isWin) {
 	document.getElementById("win-or-lose").innerHTML = "YOU WIN";
     }
@@ -814,14 +779,12 @@ function endGame()
     canvas.removeEventListener("mousedown", onMouseDown);
 }
 
-function setScore(a)
-{
+function setScore(a) {
     score = a;
     document.getElementById("score").innerHTML = score;
 }
 
-function divideBacterias()
-{
+function divideBacterias() {
     var healthy = [];
     var poisoned = [];
     var dead = [];
@@ -839,8 +802,7 @@ function divideBacterias()
     return [healthy, poisoned, dead];
 }
 
-function mergeBacterias()
-{
+function mergeBacterias() {
     bacterias.sort(compareBact); // it changes bacterias object
     var healthy, poisoned, dead;
     [healthy, poisoned, dead] = divideBacterias();
@@ -874,8 +836,7 @@ function mergeBacterias()
     return stack;
 }
 
-function sortBactsByAge(a, b)
-{
+function sortBactsByAge(a, b) {
     assert(a.gameTick != b.gameTick, "two bacterias cannot be created at the same time in this game");
     if (a.gameTick < b.gameTick) {
 	return [a, b];
@@ -887,8 +848,7 @@ function sortBactsByAge(a, b)
 
 // ranges a and b are in the range [-359, 359]
 // a[0] < a[1], b[0] < b[1]
-function merge_range(a, b)
-{
+function merge_range(a, b) {
     assert(a[0] < a[1]);
     assert(b[0] < b[1]);
     assert(a[0] >= -359);
@@ -916,15 +876,13 @@ function merge_range(a, b)
     return [newStart, newEnd];
 }
 
-function compareBact(a, b)
-{
+function compareBact(a, b) {
     return a.thetaBeginForMerge - b.thetaBeginForMerge;
 }
 
 // test
 // the value range of output ranges: [-359, 359]
-function getBactThetaRangesForMerge(bacterias)
-{
+function getBactThetaRangesForMerge(bacterias) {
     var ranges = [];
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive) {
@@ -937,8 +895,7 @@ function getBactThetaRangesForMerge(bacterias)
 }
 
 // the value range of output ranges: [0, 359]
-function getBactThetaRanges(bacterias)
-{
+function getBactThetaRanges(bacterias) {
     var ranges = [];
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive) {
@@ -950,8 +907,7 @@ function getBactThetaRanges(bacterias)
     return ranges;
 }
 
-function eat(a, b)
-{
+function eat(a, b) {
     var ra = [a.thetaBeginForMerge, a.thetaEndForMerge];
     var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
     var rc = merge_range(ra, rb);
@@ -978,8 +934,7 @@ function eat(a, b)
 }
 
 // test
-function rangeArrayToString(rr)
-{
+function rangeArrayToString(rr) {
     var s = '[';
     for (var i = 0; i < rr.length; i++) {
 	var r = rr[i];
@@ -989,8 +944,7 @@ function rangeArrayToString(rr)
     return s;
 }
 
-function Explosion()
-{
+function Explosion() {
     GameObj.call(this);
     this.theta = 0;
     this.drawMode = gl.POINTS;
@@ -1071,8 +1025,7 @@ function Explosion()
     this.setPosition(rCrustInner, 0.0);
 }
 
-function getIdleExplosionIndex()
-{
+function getIdleExplosionIndex() {
     for (var i = 0; i < explosions.length; i++) {
 	if (!explosions.isActive) {
 	    return i;
@@ -1082,8 +1035,7 @@ function getIdleExplosionIndex()
 }
 
 // pre: bacterias are sorted by beginThetaForMerge ascendingly
-function getRandomBactPosition()
-{
+function getRandomBactPosition() {
     var ranges = getBactThetaRanges(bacterias);
     var t = getRandomInt(0, 360);
     for (var i = 0; i < 360 && isInRangeList(t, ranges); i++) {
@@ -1095,8 +1047,7 @@ function getRandomBactPosition()
     return t;
 }
 
-function isFullCircleBact()
-{
+function isFullCircleBact() {
     for (var i = 0; i < bacterias.length; i++) {
 	if (bacterias[i].isActive && !bacterias[i].isPoisoned && bacterias[i].dt == 180) {
 	    return true;
