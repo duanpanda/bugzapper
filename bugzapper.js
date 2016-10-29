@@ -541,20 +541,20 @@ function Bacteria(t, dt, maxdt, color, gameTick) {
 	assert(this.maxdt - this.dt == middle - this.dt, 'maxdt - dt == middle - dt');
 	var bRight = middle + this.dt;
 
-	var theta_ranges;
+	var thetaRanges;
 	if (bLeft < pLeft && pRight < bRight) {
-	    theta_ranges = [[bLeft, pLeft], [pRight, bRight]];
+	    thetaRanges = [[bLeft, pLeft], [pRight, bRight]];
 	} else if (bLeft >= pLeft && pRight < bRight) {
 	    assert(p < middle, 'poisonThetaIndex < middle');
-	    theta_ranges = [[pRight, bRight]];
+	    thetaRanges = [[pRight, bRight]];
 	} else if (bLeft < pLeft && pRight >= bRight) {
 	    assert(p > middle, 'poisonThetaIndex > middle');
-	    theta_ranges = [[bLeft, pLeft]];
+	    thetaRanges = [[bLeft, pLeft]];
 	} else {			// bLeft >= pLeft && pRight >= bRight
-	    theta_ranges = [];
+	    thetaRanges = [];
 	}
 
-	this.visibleParts = this._ti_to_vi_range_list(theta_ranges);
+	this.visibleParts = this._ti_to_vi_range_list(thetaRanges);
 	if (this.visibleParts.length == 0) {
 	    this.reset();
 	}
