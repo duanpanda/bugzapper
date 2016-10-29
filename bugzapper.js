@@ -114,7 +114,6 @@ function onMouseDown(event) {
     var rect = canvas.getBoundingClientRect();
     var x = event.clientX - rect.left;
     var y = event.clientY - rect.top;
-    // console.log('x, y:', x, y);
     var glx = 2 * x / canvas.width - 1;
     var gly = 2 * (canvas.height - y) / canvas.height - 1;
     var polar = xy_to_polar(glx, gly);
@@ -205,7 +204,6 @@ function updateGame()
 	    if (isAllBactClear()) {
 		nextTick = 0;		// will not generate new bacteria from now on
 		isWin = true;
-		// console.log('YOU WIN');
 		return;
 	    }
 
@@ -214,7 +212,6 @@ function updateGame()
 	    if (numGrownUps == maxGrownUpsToLoseGame || isFullCircleBact()) {
 		nextTick = 0;
 		isLost = true;
-		// console.log('YOU LOSE');
 		return;
 	    }
 
@@ -227,9 +224,7 @@ function updateGame()
 	    }
 
 	    // merge bacterias
-	    // console.log('before merge: ' + rangeArrayToString(getBactThetaRangesForMerge(bacterias)));
 	    var newBactList = mergeBacterias();
-	    // console.log('after merge: ' + rangeArrayToString(getBactThetaRangesForMerge(newBactList)));
 	    bacterias = newBactList;
 	    objs = [disk].concat(explosions);
 	    objs = objs.concat(bacterias);
@@ -742,7 +737,6 @@ function addOneStdBact_updateGLBuf(t)
 function addBact(b)
 {
     bacterias.push(b);
-    console.log('bacterias.length=', bacterias.length);
     objs.push(b);
 }
 
@@ -960,10 +954,7 @@ function eat(a, b)
 {
     var ra = [a.thetaBeginForMerge, a.thetaEndForMerge];
     var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
-    // console.log('ra', ra);
-    // console.log('rb', rb);
     var rc = merge_range(ra, rb);
-    // console.log(rc);
     // assure this range difference is an even number, so the GL buffer
     // calculation can be correct later
     if ((rc[1] - rc[0]) % 2 == 1) {
@@ -971,7 +962,6 @@ function eat(a, b)
     }
     var dt = (rc[1] - rc[0]) / 2;
     var t = rd_rem(rc[0] + dt, 360);
-    // console.log(t);
     var maxdt = dt < 15 ? 15 : dt;
     if (dt == 0 || dt == 180) {
 	t = 0;
