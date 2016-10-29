@@ -85,9 +85,6 @@ window.onload = function init() {
     var speedSlider = document.getElementById("speed-slider");
     bactTickInterval = maxBactTickInterval - speedSlider.value;
     speedSlider.onchange = function(event) {
-	// Or use event.srcElemtn.value and put it with number arithmetic
-	// expression and it can be coerced from a string to an integer
-	// automatically.
 	bactTickInterval = maxBactTickInterval - event.srcElement.value;
     };
     var intervalSlider = document.getElementById("interval-slider");
@@ -137,7 +134,6 @@ function onMouseDown(event) {
 	}
     }
 }
-
 
 function initObjData() {
     disk = new Disk(0.0, 0.0, rDisk, vec3(0.7, 0.9, 0.3));
