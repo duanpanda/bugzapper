@@ -468,10 +468,8 @@ function Bacteria(t, dt, maxdt, color, gameTick) {
 	    }
 	}
 	if (this.isPoisoned) {
-	    olddt = this.poisonDt;
-	    newdt = olddt + 1;
 	    // when visible parts are empty, reset this bacteria
-	    this._setPoisonedVisibleParts(newdt);
+	    this._setPoisonedVisibleParts(this.poisonDt + 1);
 	}
     };
 
@@ -797,7 +795,6 @@ function mergeBacterias() {
 	    var a, b;
 	    [a, b] = sortBactsByAge(top, target);
 	    var c = eat(a, b);	// order: a eats b, c uses a's color
-
 	    stack.pop();
 	    stack.push(c);
 	} else {
@@ -903,7 +900,7 @@ function eat(a, b) {
     if (dt == 0 || dt == 180) {
 	t = 0;
 	dt = 180;
-	maxtdt = 180;
+	maxdt = 180;
     }
     assert(dt > 0);
     assert(maxdt >= dt);
