@@ -114,7 +114,7 @@ function onMouseDown(event) {
     var rect = canvas.getBoundingClientRect();
     var x = event.clientX - rect.left;
     var y = event.clientY - rect.top;
-    console.log('x, y:', x, y);
+    // console.log('x, y:', x, y);
     var glx = 2 * x / canvas.width - 1;
     var gly = 2 * (canvas.height - y) / canvas.height - 1;
     var polar = xy_to_polar(glx, gly);
@@ -128,7 +128,7 @@ function onMouseDown(event) {
 	if (isInBacteria(polar, rCrustInner, rCrustOuter, theta1, theta2)) {
 	    if (!isFound) {
 		isFound = true;
-		bacterias[i].poisonIt(polar[0], polar[1]);
+		bacterias[i].poisonIt(polar[1]);
 		if (bacterias[i].isGrownUp()) {
 		    setScore(score + 2);
 		}
@@ -205,7 +205,7 @@ function updateGame()
 	    if (isAllBactClear()) {
 		nextTick = 0;		// will not generate new bacteria from now on
 		isWin = true;
-		console.log('YOU WIN');
+		// console.log('YOU WIN');
 		return;
 	    }
 
@@ -214,7 +214,7 @@ function updateGame()
 	    if (numGrownUps == maxGrownUpsToLoseGame || isFullCircleBact()) {
 		nextTick = 0;
 		isLost = true;
-		console.log('YOU LOSE');
+		// console.log('YOU LOSE');
 		return;
 	    }
 
@@ -227,9 +227,9 @@ function updateGame()
 	    }
 
 	    // merge bacterias
-	    console.log('before merge: ' + rangeArrayToString(getBactThetaRangesForMerge(bacterias)));
+	    // console.log('before merge: ' + rangeArrayToString(getBactThetaRangesForMerge(bacterias)));
 	    var newBactList = mergeBacterias();
-	    console.log('after merge: ' + rangeArrayToString(getBactThetaRangesForMerge(newBactList)));
+	    // console.log('after merge: ' + rangeArrayToString(getBactThetaRangesForMerge(newBactList)));
 	    bacterias = newBactList;
 	    objs = [disk].concat(explosions);
 	    objs = objs.concat(bacterias);
@@ -346,9 +346,9 @@ function GameObj()
     this.theta = 0.0;
     this.redraw = function(gl_vIndex) {
 	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
-	gl.drawArrays(this.drawMode, gl_vIndex + this.beginIndex, this.vCount);
+	gl.drawArrays(this.drawMode, gl_vIndex + this.beginVIndex, this.vCount);
     };
-    this.beginIndex = 0;
+    this.beginVIndex = 0;
     this.vCount = this.vertices.length;
 
     // obj user can query its value, but never set it, only obj can set it internally
@@ -402,8 +402,8 @@ function Bacteria(t, dt, maxdt, color, gameTick)
     this.isActive = false;
     this.isPoisoned = false;
     this.poisonDt = 0;		// this.poisonDt can grow from 0 to this.dt
-    this.poisonTheta = t;
-    this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+    this.poisonTheta = t;	// value range: [0, 359]
+    this.visibleParts = [[this.beginVIndex, this.beginVIndex + this.vCount]];
     this.gameTick = gameTick;	// time of creation
 
     this._genPoints = function() {
@@ -426,18 +426,31 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 
     // input value range (closed range, degrees):
     //	   [0, numThetas in this bacteria]
-    this._thetaIndex_to_vIndex = function(i) {
+    this._ti_to_vi = function(i) {
 	return 2 * i;
+    };
+
+    // theta index to vIndex
+    // input is a range list
+    this._ti_to_vi_range_list = function(r) {
+	var s = [];
+	for (var i = 0; i < r.length; i++) {
+	    var a = r[i];
+	    // this._ti_to_vi(a[1] + 1) is one off the last vertex to be drawn,
+	    // if not +1 on a[1], the right most two vertices will be missing.
+	    s.push( [ this._ti_to_vi(a[0]), this._ti_to_vi(a[1] + 1) ] );
+	}
+	return s;
     };
 
     this._setVisiblePart = function(dt) {
 	this.dt = dt;		// 1 degree offset ~ 2 vertices offset
 	var numThetas = Math.floor(this.vertices.length / 2);
 	var middleIndex = Math.floor(numThetas / 2) * 2;
-	this.beginIndex = middleIndex - dt * 2;
+	this.beginVIndex = middleIndex - dt * 2;
 	this.vCount = (2 * dt + 1) * 2;
 	if (!this.poisoned) {
-	    this.visibleParts = [[this.beginIndex, this.beginIndex + this.vCount]];
+	    this.visibleParts = [[this.beginVIndex, this.beginVIndex + this.vCount]];
 	}
 
 	var t = this.theta;
@@ -493,7 +506,7 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 	}
     };
 
-    this.poisonIt = function(r, thetaRadian) {
+    this.poisonIt = function(thetaRadian) {
 	if (this.isPoisoned) {
 	    return;
 	}
@@ -512,37 +525,67 @@ function Bacteria(t, dt, maxdt, color, gameTick)
     // before calling this method, _setVisiblePart() must be called
     this._setPoisonedVisibleParts = function(poisonDt) {
 	this.poisonDt = poisonDt; // 1 degree offset ~ 2 vertices offset
-	var numThetas = Math.floor(this.vertices.length / 2);
-	assert(numThetas % 2 == 1, "there must be odd number of thetas");
-	var endThetaIndex = numThetas;
+
+	// ==== from left to right (total: n thetas) ====
+	// middle = floor(n / 2)
+	// thetas:     (t-maxdt),    (t-dt),      t,    (t+dt),    (t+maxdt)
+	// thetaIndex:         0, middle-dt, middle, middle+dt, middle+maxdt == n-1
+	// vIndex:     (thetaIndex * 2).
+	//
+	// ==== PRE-CONDITIONS ====
+	// t (this.theta) is in [0, 359], dt (this.dt) is in [0, 359]
+	// this.poisonTheta is in [0, 359]
+	// this.beginVIndex == (middle-dt) * 2
+	// (t-dt) <=> this.beginVIndex
+	//
+	// (t-dt) <= poisonTheta <= t+dt, because we assure poisonTheta is in the bacteria's visible range
+	// if poisonTheta is not in the value range [(t-dt), (t+dt)], there is only one case for this:
+	// (t-dt) < 0 < (t+dt) < poisonTheta <= 359
+	// In this case, we minus 360 on poisonTheta to adjust it into range [(t-dt), (t+dt)].
+	//
+	// ==== the invisible part ====
+	// thetas:     (poisonTheta - poisonDt),           poisonTheta, (poisonTheta + poisonDt)
+	// thetaIndex:                        ?, poisonTheta-(t-maxdt),                        ?
+	// vIndex:     (thetaIndex * 2).
+	//
+	// ==== the visible parts ====
+	// thetas:     [(t-dt), (poisonTheta-poisonDt)], [(poisonTheta+poisonDt), (t+dt)]
+	var n = Math.floor(this.vertices.length / 2);
+	var middle = Math.floor(n / 2);
+	assert(n % 2 == 1, "there must be odd number of thetas");
+
 	var tmpPoisonTheta = this.poisonTheta;
-	if (tmpPoisonTheta < this.thetaBegin) {
-	    tmpPoisonTheta += 360;
+	if (tmpPoisonTheta > this.theta + this.dt) {
+	    tmpPoisonTheta -= 360;
 	}
-	var poisonThetaIndex = tmpPoisonTheta - this.thetaBegin;
-	var a = poisonThetaIndex - poisonDt;
-	var b = poisonThetaIndex + poisonDt;
-	var av = this._thetaIndex_to_vIndex(a);
-	if (av < this.beginIndex + 2) {
-	    av = this.beginIndex + 2;
+
+	// the following are theta index that are in range [0, vertex_count - 1]
+	var p = this.poisonTheta - (this.theta - this.maxdt);
+	assert(p > 0, 'poisonThetaIndex > 0');
+	var pLeft = p - poisonDt; // pLeft can < 0
+	var pRight = p + poisonDt;
+	var bLeft = this.maxdt - this.dt;
+	assert(this.maxdt - this.dt == middle - this.dt, 'maxdt - dt == middle - dt');
+	var bRight = middle + this.dt;
+
+	var theta_ranges;
+	if (bLeft < pLeft && pRight < bRight) {
+	    theta_ranges = [[bLeft, pLeft], [pRight, bRight]];
 	}
-	var bv = this._thetaIndex_to_vIndex(b);
-	// endVIndex is not included when drawing is performed
-	var endVIndex = this._thetaIndex_to_vIndex(endThetaIndex);
-	if (bv > endVIndex - 2) {
-	    bv = endVIndex;
+	else if (bLeft >= pLeft && pRight < bRight) {
+	    assert(p < middle, 'poisonThetaIndex < middle');
+	    theta_ranges = [[pRight, bRight]];
 	}
-	if (this.beginIndex + 2 == av && bv < endVIndex) {
-	    this.visibleParts = [[bv, endVIndex]];
+	else if (bLeft < pLeft && pRight >= bRight) {
+	    assert(p > middle, 'poisonThetaIndex > middle');
+	    theta_ranges = [[bLeft, pLeft]];
 	}
-	else if (this.beginIndex + 2 < av && bv == endVIndex) {
-	    this.visibleParts = [[this.beginIndex, av]];
+	else {			// bLeft >= pLeft && pRight >= bRight
+	    theta_ranges = [];
 	}
-	else if (this.beginIndex + 2 < av && bv < endVIndex) {
-	    this.visibleParts = [[this.beginIndex, av], [bv, endVIndex]];
-	}
-	else if (this.beginIndex + 2 == av && bv == endVIndex) {
-	    this.visibleParts = [];
+
+	this.visibleParts = this._ti_to_vi_range_list(theta_ranges);
+	if (this.visibleParts.length == 0) {
 	    this.reset();
 	}
     };
@@ -912,10 +955,10 @@ function eat(a, b)
 {
     var ra = [a.thetaBeginForMerge, a.thetaEndForMerge];
     var rb = [b.thetaBeginForMerge, b.thetaEndForMerge];
-    console.log('ra', ra);
-    console.log('rb', rb);
+    // console.log('ra', ra);
+    // console.log('rb', rb);
     var rc = merge_range(ra, rb);
-    console.log(rc);
+    // console.log(rc);
     // assure this range difference is an even number, so the GL buffer
     // calculation can be correct later
     if ((rc[1] - rc[0]) % 2 == 1) {
@@ -923,7 +966,7 @@ function eat(a, b)
     }
     var dt = (rc[1] - rc[0]) / 2;
     var t = rd_rem(rc[0] + dt, 360);
-    console.log(t);
+    // console.log(t);
     var maxdt = dt < 15 ? 15 : dt;
     if (dt == 0 || dt == 180) {
 	t = 0;
@@ -1000,7 +1043,7 @@ function Explosion()
     this.redraw = function(gl_vIndex) {
 	gl.uniform1f(pointSizeLoc, this.pointSize);
 	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
-	gl.drawArrays(this.drawMode, gl_vIndex + this.beginIndex, this.vCount);
+	gl.drawArrays(this.drawMode, gl_vIndex + this.beginVIndex, this.vCount);
     };
 
     this.update = function() {
