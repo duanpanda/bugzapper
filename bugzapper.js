@@ -565,7 +565,7 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 	}
 
 	// the following are theta index that are in range [0, vertex_count - 1]
-	var p = this.poisonTheta - (this.theta - this.maxdt);
+	var p = tmpPoisonTheta - (this.theta - this.maxdt);
 	assert(p > 0, 'poisonThetaIndex > 0');
 	var pLeft = p - poisonDt; // pLeft can < 0
 	var pRight = p + poisonDt;
