@@ -539,9 +539,11 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 	// (t-dt) <=> this.beginVIndex
 	//
 	// (t-dt) <= poisonTheta <= t+dt, because we assure poisonTheta is in the bacteria's visible range
-	// if poisonTheta is not in the value range [(t-dt), (t+dt)], there is only one case for this:
-	// (t-dt) < 0 < (t+dt) < poisonTheta <= 359
+	// if poisonTheta is not in the value range [(t-dt), (t+dt)], there are two cases for this:
+	// CASE 1 ex.: (t-dt)=-10, poisonTheta=352, t=5, (t+dt)=20
 	// In this case, we minus 360 on poisonTheta to adjust it into range [(t-dt), (t+dt)].
+	// CASE 2 ex.: (t-dt)=340, t=355, poisonTheta = 5, (t+dt)=370
+	// In this case, we plus 360 on poisonTheta to ajust it into range [(t-dt), (t+dt)].
 	//
 	// ==== the invisible part ====
 	// thetas:     (poisonTheta - poisonDt),           poisonTheta, (poisonTheta + poisonDt)
@@ -557,6 +559,9 @@ function Bacteria(t, dt, maxdt, color, gameTick)
 	var tmpPoisonTheta = this.poisonTheta;
 	if (tmpPoisonTheta > this.theta + this.dt) {
 	    tmpPoisonTheta -= 360;
+	}
+	else if (tmpPoisonTheta < this.theta - this.dt) {
+	    tmpPoisonTheta += 360;
 	}
 
 	// the following are theta index that are in range [0, vertex_count - 1]
