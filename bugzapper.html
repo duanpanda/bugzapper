@@ -7,37 +7,50 @@
 
 
     <script id="vertex-shader" type="x-shader/x-vertex">
-     attribute vec4 vPosition;
-     attribute vec3 vColor;
-     varying vec4 color;
-     uniform float theta;
-     uniform float pointSize;
+     attribute vec4 aVertexPosition;
+     attribute vec4 aVertexNormal;
+     uniform mat4 uMVMatrix;
+     uniform mat4 uPMatrix;
+     uniform vec4 uLightPosition;
+     varying vec3 vNormal, vLightVec, vEyeVec;
 
-     void
-     main()
-     {
-       float s = sin(theta);
-       float c = cos(theta);
+     void main(void) {
+       vec3 pos = -(uMVMatrix * aVertexPosition).xyz;
+       vec3 light = uLightPosition.xyz;
+       vLightVec = normalize(light - pos);
+       vEyeVec = pos;
+       vNormal = normalize((uMVMatrix * aVertexNormal).xyz);
+       gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
 
-       gl_Position.x = c * vPosition.x - s * vPosition.y;
-       gl_Position.y = s * vPosition.x + c * vPosition.y;
-       gl_Position.z = 0.0;
-       gl_Position.w = 1.0;
-       gl_PointSize = pointSize;
-
-       color = vec4(vColor, 1.0);
      }
     </script>
 
     <script id="fragment-shader" type="x-shader/x-fragment">
      precision mediump float;
+     uniform vec4 uLightAmbient;
+     uniform vec4 uLightDiffuse;
+     uniform vec4 uLightSpecular;
+     uniform float uShininess;
+     varying vec3 vNormal, vLightVec, vEyeVec;
 
-     varying vec4 color;
+     void main(void) {
+       vec4 fColor;
 
-     void
-     main()
-     {
-       gl_FragColor = color;
+       vec3 H = normalize(vLightVec + vEyeVec);
+       vec4 ambient = uLightAmbient;
+
+       float Kd = max(dot(vLightVec, vNormal), 0.0);
+       vec4  diffuse = Kd*uLightDiffuse;
+
+       float Ks = pow(max(dot(vNormal, H), 0.0), uShininess);
+       vec4  specular = Ks * uLightSpecular;
+
+       if (dot(vLightVec, vNormal) < 0.0) specular = vec4(0.0, 0.0, 0.0, 1.0);
+
+       fColor = ambient + diffuse + specular;
+       fColor.a = 1.0;
+
+       gl_FragColor = fColor;
      }
     </script>
 
@@ -51,33 +64,16 @@
     <canvas id="gl-canvas" width="512" height="512">
       Oops ... your browser doesn't support the HTML5 canvas element
     </canvas>
-    <div class="controls">
-      <button id="reset">Restart Game</button>
-
-      <div class="slider">
-	<label>Interval: 30</label>
-	<input id="interval-slider" type="range"
-	       min="30" max="80" step="10" value="60" />
-	<label>80</label>
-      </div>
-
-      <div class="slider">
-	<label>Speed: 1</label>
-	<input id="speed-slider" type="range"
-	       min="1" max="19" step="2" value="1" />
-	<label>19</label>
-      </div>
-      <div class="slider">
-	<label>Max Num Complete Bacterias to Lose</label>
-	<input type="number" id="bactCountToLose" min="2" max="8" />
-	<label></flabel>
-      </div>
-    </div>
-    <div class="game-text">
-      <div>
-	<label>Score: </label><label id="score">0</label>
-      </div>
-      <p id="win-or-lose"></p>
-    </div>
+    <p> </p>
+    <button id = "Button0">Increase R</button>
+    <button id = "Button1">Decrease R</button>
+    <p> </p>
+    <button id = "Button2">Increase theta</button>
+    <button id = "Button3">Decrease theta</button>
+    <button id = "Button4">Increase phi</button>
+    <button id = "Button5">Decrease phi</button>
+    <p> </p>
+    <button id = "Button6">Increase Subdivisions</button>
+    <button id = "Button7">Decrease Subdivisions</button>
   </body>
 </html>
