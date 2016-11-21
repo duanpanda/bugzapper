@@ -10,16 +10,23 @@
      attribute vec4 aVertexPosition;
      attribute vec4 aVertexNormal;
      uniform mat4 uMVMatrix;
+     uniform mat4 uNMatrix;
      uniform mat4 uPMatrix;
      uniform vec4 uLightPosition;
+     uniform bool uUpdateLight;
      varying vec3 vNormal, vLightVec, vEyeVec;
 
      void main(void) {
        vec3 pos = -(uMVMatrix * aVertexPosition).xyz;
        vec3 light = uLightPosition.xyz;
-       vLightVec = normalize(light - pos);
+       vec3 L = normalize(light - pos);
+       if (uUpdateLight) {
+	 vLightVec = vec3(uNMatrix * vec4(L, 0.0));
+       } else {
+	 vLightVec = L;
+       }
        vEyeVec = pos;
-       vNormal = normalize((uMVMatrix * aVertexNormal).xyz);
+       vNormal = normalize((uNMatrix * aVertexNormal).xyz);
        gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
 
      }
@@ -80,5 +87,7 @@
     <p> </p>
     <button id = "Button6">Increase Subdivisions</button>
     <button id = "Button7">Decrease Subdivisions</button>
+    <p> </p>
+    <button id = "Button8">Toggle Updating Light Position</button>
   </body>
 </html>
