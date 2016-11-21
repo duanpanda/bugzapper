@@ -30,20 +30,25 @@
      uniform vec4 uLightAmbient;
      uniform vec4 uLightDiffuse;
      uniform vec4 uLightSpecular;
+
+     uniform vec4 uMaterialAmbient;
+     uniform vec4 uMaterialDiffuse;
+     uniform vec4 uMaterialSpecular;
      uniform float uShininess;
+
      varying vec3 vNormal, vLightVec, vEyeVec;
 
      void main(void) {
        vec4 fColor;
 
        vec3 H = normalize(vLightVec + vEyeVec);
-       vec4 ambient = uLightAmbient;
+       vec4 ambient = uLightAmbient * uMaterialAmbient;
 
        float Kd = max(dot(vLightVec, vNormal), 0.0);
-       vec4  diffuse = Kd*uLightDiffuse;
+       vec4  diffuse = Kd * uLightDiffuse * uMaterialDiffuse;
 
        float Ks = pow(max(dot(vNormal, H), 0.0), uShininess);
-       vec4  specular = Ks * uLightSpecular;
+       vec4  specular = Ks * uLightSpecular * uMaterialSpecular;
 
        if (dot(vLightVec, vNormal) < 0.0) specular = vec4(0.0, 0.0, 0.0, 1.0);
 
