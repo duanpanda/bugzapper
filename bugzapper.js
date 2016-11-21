@@ -1,5 +1,8 @@
 var canvas;
 var gl;
+var program;
+const RADIAN_TO_DEGREE = 180 / Math.PI;
+const DEGREE_TO_RADIAN = Math.PI / 180;
 
 var numTimesToSubdivide = 3;
 
@@ -44,48 +47,103 @@ var eye;
 var at = vec3(0.0, 0.0, 0.0);
 var up = vec3(0.0, 1.0, 0.0);
 
-function triangle(a, b, c) {
-    n1=vec4(a);
-    n2=vec4(b);
-    n3=vec4(c);
-    n1[3]=0.0; n2[3]=0.0; n3[3]=0.0;
+// Game Object Class
+function GameObj() {
+    this.vertices = [];
+    this.normals = [];
+    this.vbo = gl.createBuffer();
+    this.ibo = null;
+    this.nbo = gl.createBuffer();
 
-    normalsArray.push(n1);
-    normalsArray.push(n2);
-    normalsArray.push(n3);
+    // visible parts
+    this.beginVIndex = 0;
+    this.vCount = this.vertices.length;
 
-    pointsArray.push(a);
-    pointsArray.push(b);
-    pointsArray.push(c);
+    this.drawMode = gl.TRIANGLES;
+    this.redraw = function() {
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.vertexAttribPointer(program.aVertexPosition, 4, gl.FLOAT,
+			       false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
+	gl.vertexAttribPointer(program.aVertexNormal, 4, gl.FLOAT,
+			       false, 0, 0);
+	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
+    };
 
-    index += 3;
+    // obj user can query isActive, but never set it, only set internally
+    this.isActive = true;
 }
 
-function divideTriangle(a, b, c, count) {
-    if (count > 0) {
-	var ab = mix( a, b, 0.5);
-	var ac = mix( a, c, 0.5);
-	var bc = mix( b, c, 0.5);
-
-	ab = normalize(ab, true);
-	ac = normalize(ac, true);
-	bc = normalize(bc, true);
-
-	divideTriangle(a, ab, ac, count - 1);
-	divideTriangle(ab, b, bc, count - 1);
-	divideTriangle(bc, c, ac, count - 1);
-	divideTriangle(ab, bc, ac, count - 1);
+//  Singleton
+var Scene = {
+    objects : [],
+    addObj : function(obj) {
+	Scene.objects.push(obj);
     }
-    else {
-	triangle(a, b, c);
-    }
+};
+
+// Sphere
+function Sphere() {
+    GameObj.call(this);
+
+    this.triangle = function(a, b, c) {
+	n1=vec4(a);
+	n2=vec4(b);
+	n3=vec4(c);
+	n1[3]=0.0; n2[3]=0.0; n3[3]=0.0;
+
+	this.normals.push(n1);
+	this.normals.push(n2);
+	this.normals.push(n3);
+
+	this.vertices.push(a);
+	this.vertices.push(b);
+	this.vertices.push(c);
+
+	this.vCount += 3;
+    };
+
+    this.divideTriangle = function(a, b, c, count) {
+	if (count > 0) {
+	    var ab = mix(a, b, 0.5);
+	    var ac = mix(a, c, 0.5);
+	    var bc = mix(b, c, 0.5);
+
+	    ab = normalize(ab, true);
+	    ac = normalize(ac, true);
+	    bc = normalize(bc, true);
+
+	    this.divideTriangle(a, ab, ac, count - 1);
+	    this.divideTriangle(ab, b, bc, count - 1);
+	    this.divideTriangle(bc, c, ac, count - 1);
+	    this.divideTriangle(ab, bc, ac, count - 1);
+	}
+	else {
+	    this.triangle(a, b, c);
+	}
+    };
+
+    this.tetrahedron = function(a, b, c, d, n) {
+	this.divideTriangle(a, b, c, n);
+	this.divideTriangle(d, c, b, n);
+	this.divideTriangle(a, d, b, n);
+	this.divideTriangle(a, c, d, n);
+    };
+
+    this.genPoints = function() {
+	this.vCount = 0;
+	this.tetrahedron(va, vb, vc, vd, numTimesToSubdivide);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
+    };
+    this.genPoints();
 }
 
-function tetrahedron(a, b, c, d, n) {
-    divideTriangle(a, b, c, n);
-    divideTriangle(d, c, b, n);
-    divideTriangle(a, d, b, n);
-    divideTriangle(a, c, d, n);
+function initObjData() {
+    var sphere = new Sphere();
+    Scene.addObj(sphere);
 }
 
 window.onload = function init() {
@@ -95,34 +153,20 @@ window.onload = function init() {
     if (!gl ) { alert( "WebGL isn't available"); }
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.clearColor(0.6, 0.6, 0.6, 1.0);
 
     gl.enable(gl.DEPTH_TEST);
 
-    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
-    ambientProduct = mult(lightAmbient, materialAmbient);
-    diffuseProduct = mult(lightDiffuse, materialDiffuse);
-    specularProduct = mult(lightSpecular, materialSpecular);
+    initObjData();
 
-    tetrahedron(va, vb, vc, vd, numTimesToSubdivide);
+    program.aVertexNormal = gl.getAttribLocation(program, "aVertexNormal");
+    gl.enableVertexAttribArray(program.aVertexNormal);
 
-    var nBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
-
-    var vNormal = gl.getAttribLocation(program, "aVertexNormal");
-    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray( vNormal);
-
-    var vBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
-
-    var vPosition = gl.getAttribLocation( program, "aVertexPosition");
-    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(vPosition);
+    program.aVertexPosition = gl.getAttribLocation(program, "aVertexPosition");
+    gl.enableVertexAttribArray(program.aVertexPosition);
 
     modelViewMatrixLoc = gl.getUniformLocation(program, "uMVMatrix");
     projectionMatrixLoc = gl.getUniformLocation(program, "uPMatrix");
@@ -133,7 +177,6 @@ window.onload = function init() {
     document.getElementById("Button3").onclick = function(){theta -= dr;};
     document.getElementById("Button4").onclick = function(){phi += dr;};
     document.getElementById("Button5").onclick = function(){phi -= dr;};
-
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
 	index = 0;
@@ -149,7 +192,9 @@ window.onload = function init() {
 	init();
     };
 
-
+    var ambientProduct = mult(lightAmbient, materialAmbient);
+    var diffuseProduct = mult(lightDiffuse, materialDiffuse);
+    var specularProduct = mult(lightSpecular, materialSpecular);
     gl.uniform4fv(gl.getUniformLocation(program, "uLightAmbient"),
 		  flatten(ambientProduct));
     gl.uniform4fv(gl.getUniformLocation(program, "uLightDiffuse"),
@@ -165,7 +210,7 @@ window.onload = function init() {
 };
 
 function render() {
-    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     eye = vec3(radius*Math.sin(theta)*Math.cos(phi),
 	       radius*Math.sin(theta)*Math.sin(phi), radius*Math.cos(theta));
@@ -176,8 +221,8 @@ function render() {
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
     gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
 
-    for ( var i=0; i<index; i+=3) {
-	gl.drawArrays(gl.TRIANGLES, i, 3);
+    for (var i = 0; i < Scene.objects.length; i++) {
+	Scene.objects[i].redraw();
     }
 
     window.requestAnimFrame(render);
