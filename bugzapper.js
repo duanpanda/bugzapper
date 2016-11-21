@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 3;
+var numTimesToSubdivide = 6;
 
 var near = -100.0;
 var far = 100;
@@ -140,7 +140,7 @@ function Sphere() {
 
 function configure() {
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.6, 0.6, 0.6, 1.0);
+    gl.clearColor(0.1, 0.1, 0.1, 1.0);
     gl.enable(gl.DEPTH_TEST);
 }
 
