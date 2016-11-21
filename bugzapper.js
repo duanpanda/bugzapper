@@ -6,11 +6,6 @@ const DEGREE_TO_RADIAN = Math.PI / 180;
 
 var numTimesToSubdivide = 3;
 
-var index = 0;
-
-var pointsArray = [];
-var normalsArray = [];
-
 var near = -100.0;
 var far = 100;
 var radius = 1.5;
@@ -33,13 +28,10 @@ var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
 var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 
-var materialAmbient = vec4(1.0, 0.0, 1.0, 1.0);
-var materialDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
-var materialSpecular = vec4(1.0, 0.8, 0.0, 1.0);
-var materialShininess = 100.0;
-
-var ctm;
-var ambientColor, diffuseColor, specularColor;
+var sphereAmbient = vec4(1.0, 0.0, 1.0, 1.0);
+var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
+var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
+var sphereShininess = 100.0;
 
 var modelViewMatrix, projectionMatrix;
 
@@ -59,6 +51,9 @@ function GameObj() {
     this.beginVIndex = 0;
     this.vCount = this.vertices.length;
 
+    // obj user can query isActive, but never set it, only set internally
+    this.isActive = true;
+
     this.drawMode = gl.TRIANGLES;
     this.redraw = function() {
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
@@ -68,8 +63,6 @@ function GameObj() {
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
 
-    // obj user can query isActive, but never set it, only set internally
-    this.isActive = true;
 }
 
 //  Singleton
@@ -83,6 +76,10 @@ var Scene = {
 // Sphere
 function Sphere() {
     GameObj.call(this);
+    this.ambient = sphereAmbient;
+    this.diffuse = sphereDiffuse;
+    this.specular = sphereSpecular;
+    this.shininess = sphereShininess;
 
     this.triangle = function(a, b, c) {
 	n1=vec4(a);
@@ -133,6 +130,12 @@ function Sphere() {
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
     };
     this.genPoints();
+    this.setLights = function() {
+	gl.uniform4fv(prg.uMaterialAmbient, this.ambient);
+	gl.uniform4fv(prg.uMaterialDiffuse, this.diffuse);
+	gl.uniform4fv(prg.uMaterialSpecular, this.specular);
+	gl.uniform1f(prg.uShininess, this.shininess);
+    };
 }
 
 function configure() {
@@ -169,10 +172,6 @@ function initLights() {
     gl.uniform4fv(prg.uLightAmbient, lightAmbient);
     gl.uniform4fv(prg.uLightDiffuse, lightDiffuse);
     gl.uniform4fv(prg.uLightSpecular, lightSpecular);
-    gl.uniform4fv(prg.uMaterialAmbient, materialAmbient);
-    gl.uniform4fv(prg.uMaterialDiffuse, materialDiffuse);
-    gl.uniform4fv(prg.uMaterialSpecular, materialSpecular);
-    gl.uniform1f(prg.uShininess, materialShininess);
 }
 
 function initObjData() {
@@ -199,16 +198,14 @@ window.onload = function init() {
     document.getElementById("Button5").onclick = function(){phi -= dr;};
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
-	index = 0;
-	pointsArray = [];
-	normalsArray = [];
+	Scene.objects.pop();
 	init();
     };
     document.getElementById("Button7").onclick = function(){
-	if (numTimesToSubdivide) numTimesToSubdivide--;
-	index = 0;
-	pointsArray = [];
-	normalsArray = [];
+	if (numTimesToSubdivide > 0) {
+	    numTimesToSubdivide--;
+	}
+	Scene.objects.pop();
 	init();
     };
 
@@ -223,7 +220,9 @@ function render() {
     setMatrixUniforms();
 
     for (var i = 0; i < Scene.objects.length; i++) {
-	Scene.objects[i].redraw();
+	var obj = Scene.objects[i];
+	obj.setLights();
+	obj.redraw();
     }
 
     requestAnimFrame(render);
