@@ -31,7 +31,7 @@ var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereShininess = 100.0;
 
 var mvMatrix, pMatrix, cMatrix, nMatrix;
-var tmpMVMatrix;
+var transform;
 
 var eye;
 var at = vec3(0.0, 0.0, 0.0);
@@ -80,7 +80,9 @@ function Sphere() {
     this.diffuse = sphereDiffuse;
     this.specular = sphereSpecular;
     this.shininess = sphereShininess;
-    // this.S = scale(1.5, 1.0, 1.0);
+    this.S = scale3d(0.3, 0.3, 0.3);
+    this.T = translate(1.0, 1.0, 1.0);
+    this.R = rotate(2, [0, 1, 0]);
 
     this.triangle = function(a, b, c) {
 	n1=vec4(a);
@@ -132,10 +134,15 @@ function Sphere() {
 	gl.uniform4fv(prg.uMaterialSpecular, this.specular);
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
+    this.transform = function(m) {
+	return mult(mult(mult(m, this.S), this.R), this.T);
+    };
 }
 
 function initTransforms() {
     cMatrix = mat4();
+    transform = new SceneTransforms();
+    transform.init();
 }
 
 function configure() {
@@ -219,11 +226,17 @@ function render() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     updateTransforms();
-    setMatrixUniforms();
+
     gl.uniform1i(prg.uUpdateLight, updateLightPosition);
 
     for (var i = 0; i < Scene.objects.length; i++) {
 	var obj = Scene.objects[i];
+	transform.setMVMatrix(mvMatrix);
+	transform.push();
+	var newMVMatrix = obj.transform(mvMatrix);
+	transform.setMVMatrix(newMVMatrix);
+	transform.setMatrixUniforms();
+	transform.pop();
 	obj.setLights();
 	obj.redraw();
     }
@@ -243,16 +256,9 @@ function updateTransforms() {
     // 	fovy += 0.1;
     // 	console.log(fovy);
     // }
-    pMatrix = perspective(fovy, canvas.width / canvas.height, near, far);
-}
-
-function setMatrixUniforms() {
-    gl.uniformMatrix4fv(prg.uMVMatrix, false, flatten(mvMatrix));
-    gl.uniformMatrix4fv(prg.uPMatrix, false, flatten(pMatrix));
-    // cMatrix = mat4_inverse(mvMatrix);
-    // nMatrix = transpose(cMatrix);
-    nMatrix = mvMatrix;	      // no scaling in this application, so simplify it
-    gl.uniformMatrix4fv(prg.uNMatrix, false, flatten(nMatrix));
+    var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
+	     'near': near, 'far': far};
+    transform.calculatePerspective(p);
 }
 
 function toggleLight() {
