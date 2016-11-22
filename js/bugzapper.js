@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 3;
+var numTimesToSubdivide = 6;
 var updateLightPosition = false;
 
 var near = 0.2;
@@ -70,6 +70,9 @@ var Scene = {
     objects : [],
     addObj : function(obj) {
 	Scene.objects.push(obj);
+    },
+    reset : function() {
+	Scene.objects = [];
     }
 };
 
@@ -80,9 +83,10 @@ function Sphere() {
     this.diffuse = sphereDiffuse;
     this.specular = sphereSpecular;
     this.shininess = sphereShininess;
-    this.S = scale3d(0.3, 0.3, 0.3);
-    this.T = translate(1.0, 1.0, 1.0);
-    this.R = rotate(2, [0, 1, 0]);
+    var s = 1.0;		//Math.random();
+    this.S = mat4(); // scale3d(s, s, s);
+    this.T = translate(getRandomInt(0, 3), getRandomInt(0, 3), getRandomInt(0, 3));
+    this.R = mat4(); // rotate(2, [0, 1, 0]);
 
     this.triangle = function(a, b, c) {
 	n1=vec4(a);
@@ -184,8 +188,11 @@ function initLights() {
 }
 
 function initObjData() {
+    theta = 0.0;
+    Scene.reset();
     var sphere = new Sphere();
     Scene.addObj(sphere);
+    Scene.addObj(new Sphere());
 }
 
 window.onload = function init() {
@@ -206,15 +213,13 @@ window.onload = function init() {
     document.getElementById("Button5").onclick = function(){phi -= dr;};
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
-	Scene.objects.pop();
-	init();
+	initObjData();
     };
     document.getElementById("Button7").onclick = function(){
 	if (numTimesToSubdivide > 0) {
 	    numTimesToSubdivide--;
 	}
-	Scene.objects.pop();
-	init();
+	initObjData();
     };
     document.getElementById("Button8").onclick = toggleLight;
 
