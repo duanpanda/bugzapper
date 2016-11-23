@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 1;
+var numTimesToSubdivide = 3;
 var updateLightPosition = false;
 
 var near = 0.2;
@@ -88,11 +88,11 @@ function Sphere() {
     this.diffuse = sphereDiffuse;
     this.specular = sphereSpecular;
     this.shininess = sphereShininess;
-    var s = 0.5;//getRandomArbitrary(0, 0.5);
+    var s = 1.0;
     this.S = scale3d(s, s, s);
-    this.T = translate(1.1,//getRandomArbitrary(0,1),
-		       1.5,//getRandomArbitrary(0,1),
-		       0.4);//getRandomArbitrary(0,-1));
+    this.T = translate(0.0,//getRandomArbitrary(0,1),
+		       0.0,//getRandomArbitrary(0,1),
+		       0.0);//getRandomArbitrary(0,-1));
     this.theta = 1;
     this.R = rotate(this.theta, [0, 1, 0]);
 
