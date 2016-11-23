@@ -1,6 +1,6 @@
 function SceneTransforms() {
     this.stack = [];
-    this.mvMatrix = mat4();	// The Model-View matrix
+    this.mvMatrix = null;	// The Model-View matrix
     this.pMatrix = null;	// The projection matrix
     this.nMatrix = null;	// The normal matrix
     this.init();
@@ -16,6 +16,7 @@ SceneTransforms.prototype.calculateNormal = function() {
 };
 
 SceneTransforms.prototype.init = function(){
+    this.mvMatrix = mat4();
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
     this.calculatePerspective(p);
