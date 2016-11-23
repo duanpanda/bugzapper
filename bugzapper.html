@@ -5,7 +5,6 @@
     <link rel="stylesheet" href="css/bugzapper.css"/>
     <title>Super Bug Zapper</title>
 
-
     <script id="vertex-shader" type="x-shader/x-vertex">
      attribute vec4 aVertexPosition;
      attribute vec4 aVertexNormal;
@@ -28,7 +27,6 @@
        vEyeVec = pos;
        vNormal = normalize((uNMatrix * aVertexNormal).xyz);
        gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
-
      }
     </script>
 

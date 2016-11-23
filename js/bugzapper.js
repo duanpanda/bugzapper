@@ -30,7 +30,6 @@ var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereShininess = 100.0;
 
-var mvMatrix, pMatrix, cMatrix, nMatrix;
 var transform;
 
 var eye;
@@ -67,6 +66,8 @@ function GameObj() {
     };
     this.calcTransformMatrix = function(m, t) {
 	return m;
+    };
+    this.setLights = function() {
     };
 }
 
@@ -161,15 +162,11 @@ function Sphere() {
 	a = mult(a, this.T);
 	a = mult(a, this.R);
 	a = mult(a, this.S);
-	if (t == 1) {
-	    logMatrix(a);
-	}
 	return a;
     };
 }
 
 function initTransforms() {
-    cMatrix = mat4();
     transform = new SceneTransforms();
     transform.init();
 }
@@ -268,9 +265,8 @@ function render() {
 
     for (var i = 0; i < Scene.objects.length; i++) {
 	var obj = Scene.objects[i];
-	transform.setMVMatrix(mvMatrix);
 	transform.push();
-	var newMVMatrix = obj.calcTransformMatrix(mvMatrix, gameTick);
+	var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix, gameTick);
 	transform.setMVMatrix(newMVMatrix);
 	transform.setMatrixUniforms();
 	transform.pop();
@@ -288,8 +284,8 @@ function updateTransforms() {
     eye = vec3(radius * Math.sin(theta) * Math.cos(phi),
 	       radius * Math.sin(theta) * Math.sin(phi),
 	       radius * Math.cos(theta));
-    mvMatrix = lookAt(eye, at, up);
-    displayMatrix(mvMatrix);
+    transform.setMVMatrix(lookAt(eye, at, up));
+    displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
     transform.calculatePerspective(p);
