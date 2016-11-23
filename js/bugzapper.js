@@ -88,9 +88,11 @@ function Sphere() {
     this.diffuse = sphereDiffuse;
     this.specular = sphereSpecular;
     this.shininess = sphereShininess;
-    var s = Math.random();
+    var s = 0.5;//getRandomArbitrary(0, 0.5);
     this.S = scale3d(s, s, s);
-    this.T = mat4(); // translate(getRandomInt(0,1), getRandomInt(0,2), 0);
+    this.T = translate(1.1,//getRandomArbitrary(0,1),
+		       1.5,//getRandomArbitrary(0,1),
+		       0.4);//getRandomArbitrary(0,-1));
     this.theta = 1;
     this.R = rotate(this.theta, [0, 1, 0]);
 
@@ -131,7 +133,10 @@ function Sphere() {
     };
     this.genPoints = function() {
 	this.vCount = 0;
+	this.vertices = [];
+	this.normals = [];
 	this.tetrahedron(va, vb, vc, vd, numTimesToSubdivide);
+
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
@@ -156,6 +161,9 @@ function Sphere() {
 	a = mult(a, this.T);
 	a = mult(a, this.R);
 	a = mult(a, this.S);
+	if (t == 1) {
+	    logMatrix(a);
+	}
 	return a;
     };
 }
@@ -231,13 +239,17 @@ window.onload = function init() {
     document.getElementById("Button5").onclick = function(){phi -= dr;};
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
-	initObjData();
+	for (var i = 0; i < Scene.objects.length; i++) {
+	    Scene.objects[i].genPoints();
+	}
     };
     document.getElementById("Button7").onclick = function(){
 	if (numTimesToSubdivide > 0) {
 	    numTimesToSubdivide--;
 	}
-	initObjData();
+	for (var i = 0; i < Scene.objects.length; i++) {
+	    Scene.objects[i].genPoints();
+	}
     };
     document.getElementById("Button8").onclick = toggleLight;
 
@@ -270,19 +282,14 @@ function render() {
 }
 
 function updateTransforms() {
-    theta = 30 * DEGREE_TO_RADIAN;
-    phi += dr / 5;
+    // theta = 30 * DEGREE_TO_RADIAN;
+    // phi += dr / 5;
     // radius += 0.01;
     eye = vec3(radius * Math.sin(theta) * Math.cos(phi),
 	       radius * Math.sin(theta) * Math.sin(phi),
 	       radius * Math.cos(theta));
-    console.log(eye[0].toFixed(1), eye[1].toFixed(1), eye[2].toFixed(1));
     mvMatrix = lookAt(eye, at, up);
     displayMatrix(mvMatrix);
-    // if (fovy < 180) {
-    // 	fovy += 0.1;
-    // 	console.log(fovy);
-    // }
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
     transform.calculatePerspective(p);
