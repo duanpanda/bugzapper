@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 6;
+var numTimesToSubdivide = 1;
 var updateLightPosition = false;
 
 var near = 0.2;
@@ -12,7 +12,7 @@ var far = 5000;
 var radius = 1.5;
 var theta = 0.0;
 var phi = 0.0;
-var dr = 5.0 * Math.PI/180.0;
+var dr = 5.0 * DEGREE_TO_RADIAN;
 var fovy = 90;
 
 var va = vec4(0.0, 0.0, -1.0, 1.0);
@@ -40,6 +40,8 @@ var up = vec3(0.0, 1.0, 0.0);
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
+var gameTick = 0;
+
 // Game Object Class
 function GameObj() {
     this.vertices = [];
@@ -63,6 +65,9 @@ function GameObj() {
 	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
+    this.calcTransformMatrix = function(m, t) {
+	return m;
+    };
 }
 
 //  Singleton
@@ -83,10 +88,11 @@ function Sphere() {
     this.diffuse = sphereDiffuse;
     this.specular = sphereSpecular;
     this.shininess = sphereShininess;
-    var s = 1.0;		//Math.random();
-    this.S = mat4(); // scale3d(s, s, s);
-    this.T = translate(getRandomInt(0, 3), getRandomInt(0, 3), getRandomInt(0, 3));
-    this.R = mat4(); // rotate(2, [0, 1, 0]);
+    var s = Math.random();
+    this.S = scale3d(s, s, s);
+    this.T = mat4(); // translate(getRandomInt(0,1), getRandomInt(0,2), 0);
+    this.theta = 1;
+    this.R = rotate(this.theta, [0, 1, 0]);
 
     this.triangle = function(a, b, c) {
 	n1=vec4(a);
@@ -138,8 +144,19 @@ function Sphere() {
 	gl.uniform4fv(prg.uMaterialSpecular, this.specular);
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
-    this.transform = function(m) {
-	return mult(mult(mult(m, this.S), this.R), this.T);
+    this.calcTransformMatrix = function(m, t) {
+	if (t % 2 == 0) {
+	    this.theta++;
+	    this.R = rotate(this.theta, [0, 1, 0]);
+	}
+	// in effect, scale first, rotate second, translate third, then apply
+	// the global camera transformation m
+	var a = mat4();		// identity
+	a = mult(a, m);
+	a = mult(a, this.T);
+	a = mult(a, this.R);
+	a = mult(a, this.S);
+	return a;
     };
 }
 
@@ -189,10 +206,11 @@ function initLights() {
 
 function initObjData() {
     theta = 0.0;
+    gameTick = 0;
     Scene.reset();
     var sphere = new Sphere();
     Scene.addObj(sphere);
-    Scene.addObj(new Sphere());
+    // Scene.addObj(new Sphere());
 }
 
 window.onload = function init() {
@@ -227,6 +245,8 @@ window.onload = function init() {
 };
 
 function render() {
+    gameTick++;
+
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -238,7 +258,7 @@ function render() {
 	var obj = Scene.objects[i];
 	transform.setMVMatrix(mvMatrix);
 	transform.push();
-	var newMVMatrix = obj.transform(mvMatrix);
+	var newMVMatrix = obj.calcTransformMatrix(mvMatrix, gameTick);
 	transform.setMVMatrix(newMVMatrix);
 	transform.setMatrixUniforms();
 	transform.pop();
@@ -250,13 +270,15 @@ function render() {
 }
 
 function updateTransforms() {
-    theta += 0.02;
-    // phi += 0.01;
+    theta = 30 * DEGREE_TO_RADIAN;
+    phi += dr / 5;
     // radius += 0.01;
-    eye = vec3(radius*Math.sin(theta)*Math.cos(phi),
-	       radius*Math.sin(theta)*Math.sin(phi), radius*Math.cos(theta));
-    // at[0] += 0.005;
+    eye = vec3(radius * Math.sin(theta) * Math.cos(phi),
+	       radius * Math.sin(theta) * Math.sin(phi),
+	       radius * Math.cos(theta));
+    console.log(eye[0].toFixed(1), eye[1].toFixed(1), eye[2].toFixed(1));
     mvMatrix = lookAt(eye, at, up);
+    displayMatrix(mvMatrix);
     // if (fovy < 180) {
     // 	fovy += 0.1;
     // 	console.log(fovy);
