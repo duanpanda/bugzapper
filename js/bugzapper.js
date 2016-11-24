@@ -24,11 +24,14 @@ var lightPosition = vec4(2.0, 1.5, 2, 0.0);
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
 var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
-
 var sphereAmbient = vec4(1.0, 0.0, 1.0, 1.0);
 var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereShininess = 100.0;
+var capAmbient = vec4(0.0, 0.0, 1.0, 1.0);
+var capDiffuse = vec4(0.0, 0.2, 1.0, 1.0);
+var capSpecular = vec4(0.0, 0.2, 1.0, 1.0);
+var capShininess = 50.0;
 
 var transform;
 
@@ -40,6 +43,8 @@ const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
 var gameTick = 0;
+
+var capRadius = 1.02;
 
 // Game Object Class
 function GameObj() {
@@ -215,7 +220,7 @@ function initObjData() {
     Scene.reset();
     var sphere = new Sphere();
     Scene.addObj(sphere);
-    // Scene.addObj(new Sphere());
+    Scene.addObj(new Cap());
 }
 
 window.onload = function init() {
@@ -281,9 +286,9 @@ function updateTransforms() {
     // theta = 30 * DEGREE_TO_RADIAN;
     // phi += dr / 5;
     // radius += 0.01;
-    eye = vec3(radius * Math.sin(theta) * Math.cos(phi),
+    eye = vec3(radius * Math.cos(theta) * Math.sin(phi),
 	       radius * Math.sin(theta) * Math.sin(phi),
-	       radius * Math.cos(theta));
+	       radius * Math.cos(phi));
     transform.setMVMatrix(lookAt(eye, at, up));
     displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
@@ -294,3 +299,69 @@ function updateTransforms() {
 function toggleLight() {
     updateLightPosition = !updateLightPosition;
 }
+
+function Cap() {
+    GameObj.call(this);
+    this.ambient = capAmbient;
+    this.diffuse = capDiffuse;
+    this.specular = capSpecular;
+    this.shininess = capShininess;
+    this.T = mat4();
+    this.R = mat4();
+    this.drawMode = gl.TRIANGLE_FAN;
+    this.point = function(theta, phi) {
+	var t = theta * DEGREE_TO_RADIAN;
+	var p = phi * DEGREE_TO_RADIAN;
+	var x = capRadius * Math.cos(t) * Math.sin(p);
+	var y = capRadius * Math.sin(t) * Math.sin(p);
+	var z = capRadius * Math.cos(p);
+	return vec4(x, y, z, 1.0);
+    };
+    this.calcNormals = function() {
+	this.normals = [];
+	var n;
+	for (var i = 0; i < this.vertices.length; i++) {
+	    n = vec4(this.vertices[i]);
+	    n[3] = 0.0;
+	    this.normals.push(n);
+	}
+    };
+    this.genPoints = function() {
+	this.vCount = 0;
+	this.vertices = [];
+	var p;
+	var data = [[0,0]];
+	for (var i = 0; i < 36; i++) {
+	    data.push([i*10,10]);
+	}
+	data.push([0,10]);
+	var theta, phi;
+	for (i = 0; i < data.length; i++) {
+	    theta = data[i][0];
+	    phi = data[i][1];
+	    p = this.point(theta, phi);
+	    this.vertices.push(p);
+	    this.vCount++;
+	}
+	this.calcNormals();
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
+    };
+    this.genPoints();
+    this.setLights = function() {
+	gl.uniform4fv(prg.uMaterialAmbient, this.ambient);
+	gl.uniform4fv(prg.uMaterialDiffuse, this.diffuse);
+	gl.uniform4fv(prg.uMaterialSpecular, this.specular);
+	gl.uniform1f(prg.uShininess, this.shininess);
+    };
+    this.calcTransformMatrix = function(m, t) {
+	var a = mat4();		// identity
+	a = mult(a, m);
+	a = mult(a, this.T);
+	a = mult(a, this.R);
+	return a;
+    };
+};
