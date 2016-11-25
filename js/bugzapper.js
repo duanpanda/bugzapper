@@ -307,8 +307,9 @@ function Cap() {
     this.diffuse = capDiffuse;
     this.specular = capSpecular;
     this.shininess = capShininess;
+    this.theta = 0;
     this.T = mat4();
-    this.R = mat4();
+    this.R = rotate(this.theta, [1, 1, 1]);
     this.drawMode = gl.TRIANGLE_FAN;
     this.point = function(theta, phi) {
 	var t = theta * DEGREE_TO_RADIAN;
@@ -359,6 +360,10 @@ function Cap() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
+	// if (t % 2 == 0) {
+	    this.theta++;
+	    this.R = rotate(this.theta, [1, 1, 1]);
+	// }
 	var a = mat4();		// identity
 	a = mult(a, m);
 	a = mult(a, this.T);
