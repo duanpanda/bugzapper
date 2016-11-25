@@ -156,10 +156,10 @@ function Sphere() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
-	// if (t % 2 == 0) {
-	//     this.theta++;
-	//     this.R = rotate(this.theta, [0, 1, 0]);
-	// }
+	if (t % 2 == 0) {
+	    this.theta++;
+	    this.R = rotate(this.theta, [0, 1, 0]);
+	}
 	// in effect, scale first, rotate second, translate third, then apply
 	// the global camera transformation m
 	var a = mat4();		// identity
@@ -220,7 +220,9 @@ function initObjData() {
     Scene.reset();
     var sphere = new Sphere();
     Scene.addObj(sphere);
-    Scene.addObj(new Cap());
+    for (var i = 0; i < 5; i++) {
+	Scene.addObj(new Cap());
+    };
 }
 
 window.onload = function init() {
@@ -307,7 +309,8 @@ function Cap() {
     this.diffuse = capDiffuse;
     this.specular = capSpecular;
     this.shininess = capShininess;
-    this.theta = 0;
+    this.theta = getRandomInt(0, 360);
+    this.vector = vec3(Math.random(), Math.random(), Math.random());
     this.T = mat4();
     this.R = rotate(this.theta, [1, 1, 1]);
     this.drawMode = gl.TRIANGLE_FAN;
@@ -360,10 +363,7 @@ function Cap() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
-	// if (t % 2 == 0) {
-	    this.theta++;
-	    this.R = rotate(this.theta, [1, 1, 1]);
-	// }
+	this.R = rotate(this.theta, this.vector);
 	var a = mat4();		// identity
 	a = mult(a, m);
 	a = mult(a, this.T);
