@@ -1,5 +1,6 @@
-function SceneTransforms() {
+function SceneTransforms(c) {
     this.stack = [];
+    this.camera = c;
     this.mvMatrix = null;	// The Model-View matrix
     this.pMatrix = null;	// The projection matrix
     this.nMatrix = null;	// The normal matrix
@@ -8,6 +9,10 @@ function SceneTransforms() {
 
 SceneTransforms.prototype.setMVMatrix = function(m) {
     this.mvMatrix = mat4(m[0], m[1], m[2], m[3]);
+};
+
+SceneTransforms.prototype.calculateModelView = function() {
+    this.mvMatrix = this.camera.getViewTransform();
 };
 
 SceneTransforms.prototype.calculateNormal = function() {

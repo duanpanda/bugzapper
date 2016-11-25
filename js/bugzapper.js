@@ -27,13 +27,15 @@ var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 var sphereAmbient = vec4(1.0, 0.0, 1.0, 1.0);
 var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
-var sphereShininess = 70.0;
+var sphereShininess = 100.0;
 var capAmbient = vec4(1.0, 0.0, 0.0, 1.0);
 var capDiffuse = vec4(1.0, 0.0, 0.0, 1.0);
 var capSpecular = vec4(1.0, 0.0, 0.0, 1.0);
-var capShininess = 300.0;
+var capShininess = 200.0;
 
 var transform;
+var camera;
+var interactor;
 
 var eye;
 var at = vec3(0.0, 0.0, 0.0);
@@ -44,7 +46,7 @@ const CAMERA_TRACKING_TYPE = 2;
 
 var gameTick = 0;
 
-var capRadius = 1.02;
+var capRadius = 1.01;
 
 // Game Object Class
 function GameObj() {
@@ -156,10 +158,6 @@ function Sphere() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
-	// if (t % 2 == 0) {
-	//     this.theta++;
-	//     this.R = rotate(this.theta, [0, 1, 0]);
-	// }
 	// in effect, scale first, rotate second, translate third, then apply
 	// the global camera transformation m
 	var a = mat4();		// identity
@@ -172,7 +170,7 @@ function Sphere() {
 }
 
 function initTransforms() {
-    transform = new SceneTransforms();
+    transform = new SceneTransforms(camera);
     transform.init();
 }
 
@@ -180,6 +178,14 @@ function configure() {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.1, 0.1, 0.1, 1.0);
     gl.enable(gl.DEPTH_TEST);
+
+    camera = new Camera(CAMERA_ORBIT_TYPE);
+    camera.goHome([0.0, 0.0, -1.5]);
+    camera.hookRenderer = null;
+    camera.hookGUIUpdate = null;
+
+    interactor = new CameraInteractor(camera, canvas);
+
     initTransforms();
 }
 
@@ -272,11 +278,14 @@ function render() {
 
     for (var i = 0; i < Scene.objects.length; i++) {
 	var obj = Scene.objects[i];
+
+	transform.calculateModelView();
 	transform.push();
 	var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix, gameTick);
 	transform.setMVMatrix(newMVMatrix);
 	transform.setMatrixUniforms();
 	transform.pop();
+
 	obj.setLights();
 	obj.redraw();
     }
@@ -288,10 +297,10 @@ function updateTransforms() {
     // theta = 30 * DEGREE_TO_RADIAN;
     // phi += dr / 5;
     // radius += 0.01;
-    eye = vec3(radius * Math.cos(theta) * Math.sin(phi),
-	       radius * Math.sin(theta) * Math.sin(phi),
-	       radius * Math.cos(phi));
-    transform.setMVMatrix(lookAt(eye, at, up));
+    // eye = vec3(radius * Math.cos(theta) * Math.sin(phi),
+    // 	       radius * Math.sin(theta) * Math.sin(phi),
+    // 	       radius * Math.cos(phi));
+    // transform.setMVMatrix(lookAt(eye, at, up));
     displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
@@ -311,6 +320,8 @@ function Cap() {
     this.shininess = capShininess;
     this.theta = getRandomInt(0, 360);
     this.vector = vec3(Math.random(), Math.random(), Math.random());
+    var s = getRandomArbitrary(0.0, 1.5);
+    this.S = scale3d(s, s, 1.0);
     this.T = mat4();
     this.R = rotate(this.theta, [1, 1, 1]);
     this.drawMode = gl.TRIANGLE_FAN;
@@ -368,6 +379,7 @@ function Cap() {
 	a = mult(a, m);
 	a = mult(a, this.T);
 	a = mult(a, this.R);
+	a = mult(a, this.S);
 	return a;
     };
     this.redraw = function() {
