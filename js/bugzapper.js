@@ -20,18 +20,18 @@ var vb = vec4(0.0, 0.942809, 0.333333, 1.0);
 var vc = vec4(-0.816497, -0.471405, 0.333333, 1.0);
 var vd = vec4(0.816497, -0.471405, 0.333333, 1.0);
 
-var lightPosition = vec4(2.0, 1.5, 2, 0.0);
+var lightPosition = vec4(0, 0.8, 0.8, 0.0);
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
 var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 var sphereAmbient = vec4(1.0, 0.0, 1.0, 1.0);
 var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
-var sphereShininess = 100.0;
+var sphereShininess = 70.0;
 var capAmbient = vec4(1.0, 0.0, 0.0, 1.0);
 var capDiffuse = vec4(1.0, 0.0, 0.0, 1.0);
 var capSpecular = vec4(1.0, 0.0, 0.0, 1.0);
-var capShininess = 100.0;
+var capShininess = 300.0;
 
 var transform;
 
@@ -156,10 +156,10 @@ function Sphere() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
-	if (t % 2 == 0) {
-	    this.theta++;
-	    this.R = rotate(this.theta, [0, 1, 0]);
-	}
+	// if (t % 2 == 0) {
+	//     this.theta++;
+	//     this.R = rotate(this.theta, [0, 1, 0]);
+	// }
 	// in effect, scale first, rotate second, translate third, then apply
 	// the global camera transformation m
 	var a = mat4();		// identity

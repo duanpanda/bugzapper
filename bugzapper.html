@@ -16,16 +16,16 @@
      varying vec3 vNormal, vLightVec, vEyeVec;
 
      void main(void) {
-       vec3 pos = -(uMVMatrix * aVertexPosition).xyz;
-       vec3 light = uLightPosition.xyz;
-       vec3 L = normalize(light - pos);
+       vec3 pos = (uMVMatrix * aVertexPosition).xyz;
+       vec3 light;
        if (uUpdateLight) {
-	 vLightVec = vec3(uMVMatrix * vec4(L, 0.0));
+	 light = (uMVMatrix * uLightPosition).xyz;
        } else {
-	 vLightVec = L;
+	 light = uLightPosition.xyz;
        }
-       vEyeVec = pos;
-       vNormal = normalize((uNMatrix * aVertexNormal).xyz);
+       vLightVec = pos - light;
+       vEyeVec = -pos;
+       vNormal = (uNMatrix * aVertexNormal).xyz;
        gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
      }
     </script>
@@ -46,16 +46,18 @@
      void main(void) {
        vec4 fColor;
 
-       vec3 H = normalize(vLightVec + vEyeVec);
+       vec3 L = normalize(vLightVec);
+       vec3 N = normalize(vNormal);
+       vec3 E = normalize(vEyeVec);
+       vec3 R = reflect(L, N);
+
        vec4 ambient = uLightAmbient * uMaterialAmbient;
 
-       float Kd = max(dot(vLightVec, vNormal), 0.0);
+       float Kd = max(dot(N, -L), 0.0);
        vec4  diffuse = Kd * uLightDiffuse * uMaterialDiffuse;
 
-       float Ks = pow(max(dot(vNormal, H), 0.0), uShininess);
+       float Ks = pow(max(dot(R, E), 0.0), uShininess);
        vec4  specular = Ks * uLightSpecular * uMaterialSpecular;
-
-       if (dot(vLightVec, vNormal) < 0.0) specular = vec4(0.0, 0.0, 0.0, 1.0);
 
        fColor = ambient + diffuse + specular;
        fColor.a = 1.0;
