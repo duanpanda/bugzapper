@@ -20,7 +20,7 @@
        vec3 light = uLightPosition.xyz;
        vec3 L = normalize(light - pos);
        if (uUpdateLight) {
-	 vLightVec = vec3(uNMatrix * vec4(L, 0.0));
+	 vLightVec = vec3(uMVMatrix * vec4(L, 0.0));
        } else {
 	 vLightVec = L;
        }
