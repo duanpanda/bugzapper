@@ -41,16 +41,6 @@ mat4_inverse = function(matrix) {
 		vec4(b[12], b[13], b[14], b[15]));
 };
 
-function mat4_multiplyVec4(a,b,c) {
-    c||(c=b);
-    var d=b[0], e=b[1], g=b[2], b=b[3];
-    c[0]=a[0]*d+a[4]*e+a[8]*g+a[12]*b;
-    c[1]=a[1]*d+a[5]*e+a[9]*g+a[13]*b;
-    c[2]=a[2]*d+a[6]*e+a[10]*g+a[14]*b;
-    c[3]=a[3]*d+a[7]*e+a[11]*g+a[15]*b;
-    return c;
-}
-
 function displayMatrix(m) {
     var fm = flatten(m);
     for (var i = 0; i < 16; i++) {
