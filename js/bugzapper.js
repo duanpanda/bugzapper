@@ -28,10 +28,10 @@ var sphereAmbient = vec4(1.0, 0.0, 1.0, 1.0);
 var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereShininess = 100.0;
-var capAmbient = vec4(0.0, 0.0, 1.0, 1.0);
-var capDiffuse = vec4(0.0, 0.2, 1.0, 1.0);
-var capSpecular = vec4(0.0, 0.2, 1.0, 1.0);
-var capShininess = 50.0;
+var capAmbient = vec4(1.0, 0.0, 0.0, 1.0);
+var capDiffuse = vec4(1.0, 0.0, 0.0, 1.0);
+var capSpecular = vec4(1.0, 0.0, 0.0, 1.0);
+var capShininess = 100.0;
 
 var transform;
 
@@ -156,10 +156,10 @@ function Sphere() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
-	if (t % 2 == 0) {
-	    this.theta++;
-	    this.R = rotate(this.theta, [0, 1, 0]);
-	}
+	// if (t % 2 == 0) {
+	//     this.theta++;
+	//     this.R = rotate(this.theta, [0, 1, 0]);
+	// }
 	// in effect, scale first, rotate second, translate third, then apply
 	// the global camera transformation m
 	var a = mat4();		// identity
@@ -298,6 +298,7 @@ function updateTransforms() {
 
 function toggleLight() {
     updateLightPosition = !updateLightPosition;
+    console.log('updateLightPosition =', updateLightPosition);
 }
 
 function Cap() {
@@ -363,5 +364,12 @@ function Cap() {
 	a = mult(a, this.T);
 	a = mult(a, this.R);
 	return a;
+    };
+    this.redraw = function() {
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.vertexAttribPointer(prg.aVertexPosition, 4, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
+	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
+	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
 };
