@@ -28,31 +28,28 @@ mat4_inverse = function(matrix) {
 	B=c*i-e*f, t=c*j-g*f, u=d*i-e*h, v=d*j-g*h, w=e*j-g*i, x=k*p-l*m,
 	y=k*r-n*m, z=k*s-o*m, C=l*r-n*p, D=l*s-o*p, E=n*s-o*r,
 	q=A*E-B*D+t*C+u*z-v*y+w*x;
-    if(!q)return null;
+    if (!q) return null;
     q=1/q;
-    b[0]=(h*E-i*D+j*C)*q;
-    b[1]=(-d*E+e*D-g*C)*q;
-    b[2]=(p*w-r*v+s*u)*q;
-    b[3]=(-l*w+n*v-o*u)*q;
-    b[4]=(-f*E+i*z-j*y)*q;
-    b[5]=(c*E-e*z+g*y)*q;
-    b[6]=(-m*w+r*t-s*B)*q;
-    b[7]=(k*w-n*t+o*B)*q;
-    b[8]=(f*D-h*z+j*x)*q;
-    b[9]=(-c*D+d*z-g*x)*q;
-    b[10]=(m*v-p*t+s*A)*q;
-    b[11]=(-k*v+l*t-o*A)*q;
-    b[12]=(-f*C+h*y-i*x)*q;
-    b[13]=(c*C-d*y+e*x)*q;
-    b[14]=(-m*u+p*B-r*A)*q;
+    b[0]=(h*E-i*D+j*C)*q; b[1]=(-d*E+e*D-g*C)*q; b[2]=(p*w-r*v+s*u)*q;
+    b[3]=(-l*w+n*v-o*u)*q; b[4]=(-f*E+i*z-j*y)*q; b[5]=(c*E-e*z+g*y)*q;
+    b[6]=(-m*w+r*t-s*B)*q; b[7]=(k*w-n*t+o*B)*q; b[8]=(f*D-h*z+j*x)*q;
+    b[9]=(-c*D+d*z-g*x)*q; b[10]=(m*v-p*t+s*A)*q; b[11]=(-k*v+l*t-o*A)*q;
+    b[12]=(-f*C+h*y-i*x)*q; b[13]=(c*C-d*y+e*x)*q; b[14]=(-m*u+p*B-r*A)*q;
     b[15]=(k*u-l*B+n*A)*q;
-    return mat4(vec4(b[0], b[1], b[2], b[3]),
-		vec4(b[4], b[5], b[6], b[7]),
+    return mat4(vec4(b[0], b[1], b[2], b[3]), vec4(b[4], b[5], b[6], b[7]),
 		vec4(b[8], b[9], b[10], b[11]),
 		vec4(b[12], b[13], b[14], b[15]));
 };
 
-function mat4_multiplyVec4(a,b,c){c||(c=b);var d=b[0],e=b[1],g=b[2],b=b[3];c[0]=a[0]*d+a[4]*e+a[8]*g+a[12]*b;c[1]=a[1]*d+a[5]*e+a[9]*g+a[13]*b;c[2]=a[2]*d+a[6]*e+a[10]*g+a[14]*b;c[3]=a[3]*d+a[7]*e+a[11]*g+a[15]*b;return c;};
+function mat4_multiplyVec4(a,b,c) {
+    c||(c=b);
+    var d=b[0], e=b[1], g=b[2], b=b[3];
+    c[0]=a[0]*d+a[4]*e+a[8]*g+a[12]*b;
+    c[1]=a[1]*d+a[5]*e+a[9]*g+a[13]*b;
+    c[2]=a[2]*d+a[6]*e+a[10]*g+a[14]*b;
+    c[3]=a[3]*d+a[7]*e+a[11]*g+a[15]*b;
+    return c;
+}
 
 function displayMatrix(m) {
     var fm = flatten(m);
