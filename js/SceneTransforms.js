@@ -39,7 +39,8 @@ SceneTransforms.prototype.setMatrixUniforms = function() {
 };
 
 SceneTransforms.prototype.push = function() {
-    var memento = this.mvMatrix;
+    var memento = mat4(this.mvMatrix[0], this.mvMatrix[1], this.mvMatrix[2],
+		       this.mvMatrix[3]);
     this.stack.push(memento);
 };
 
