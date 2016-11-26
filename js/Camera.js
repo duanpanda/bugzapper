@@ -98,12 +98,12 @@ Camera.prototype.update = function() {
     }
 
     var m = this.matrix;
-    mult(m, [1, 0, 0, 0], this.right);
-    mult(m, [0, 1, 0, 0], this.up);
-    mult(m, [0, 0, 1, 0], this.normal);
+    this.right = vec3(mat4_multiplyVec4(m, [1, 0, 0, 0]));
+    this.up = vec3(mat4_multiplyVec4(m, [0, 1, 0, 0], this.up));
+    this.normal = vec3(mat4_multiplyVec4(m, [0, 0, 1, 0], this.normal));
 
     if (this.type == CAMERA_TRACKING_TYPE) {
-	mult(m, [0, 0, 0, 1], this.position);
+	this.position = vec3(mat4_multiplyVec4(m, [0, 0, 0, 1], this.position));
     }
 
     if (this.hookRenderer) {

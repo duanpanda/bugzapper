@@ -28,9 +28,9 @@ CameraInteractor.prototype.onMouseDown = function(ev) {
     this.x = ev.clientX;
     this.y = ev.clientY;
     this.button = ev.button;
-    this.dstep = Math.max(this.camera.position[0],
-			  this.camera.position[1],
-			  this.camera.position[2])/10;
+    this.dstep = Math.max(Math.abs(this.camera.position[0]),
+			  Math.abs(this.camera.position[1]),
+			  Math.abs(this.camera.position[2])) / 100;
 };
 
 CameraInteractor.prototype.onMouseMove = function(ev) {

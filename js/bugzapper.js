@@ -169,11 +169,6 @@ function Sphere() {
     };
 }
 
-function initTransforms() {
-    transform = new SceneTransforms(camera);
-    transform.init();
-}
-
 function configure() {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.1, 0.1, 0.1, 1.0);
@@ -181,12 +176,11 @@ function configure() {
 
     camera = new Camera(CAMERA_ORBIT_TYPE);
     camera.goHome([0.0, 0.0, -1.5]);
-    camera.hookRenderer = null;
-    camera.hookGUIUpdate = null;
 
     interactor = new CameraInteractor(camera, canvas);
 
-    initTransforms();
+    transform = new SceneTransforms(camera);
+    transform.init();
 }
 
 function initProgram() {
