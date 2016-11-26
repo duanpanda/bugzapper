@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 3;
+var numTimesToSubdivide = 5;
 var updateLightPosition = false;
 
 var near = 0.2;
@@ -161,10 +161,7 @@ function Sphere() {
 	// in effect, scale first, rotate second, translate third, then apply
 	// the global camera transformation m
 	var a = mat4();		// identity
-	a = mult(a, m);
-	a = mult(a, this.T);
-	a = mult(a, this.R);
-	a = mult(a, this.S);
+	a = mult(mult(mult(mult(a, m), this.T), this.R), this.S);
 	return a;
     };
 }
@@ -314,8 +311,8 @@ function Cap() {
     this.shininess = capShininess;
     this.theta = getRandomInt(0, 360);
     this.vector = vec3(Math.random(), Math.random(), Math.random());
-    var s = getRandomArbitrary(0.0, 1.5);
-    this.S = scale3d(s, s, 1.0);
+    this.scaleFactor = getRandomArbitrary(0.5, 1.5);
+    this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
     this.T = mat4();
     this.R = rotate(this.theta, [1, 1, 1]);
     this.drawMode = gl.TRIANGLE_FAN;
@@ -368,12 +365,13 @@ function Cap() {
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
     this.calcTransformMatrix = function(m, t) {
+	if (this.scaleFactor < 1.2) {
+	    this.scaleFactor += 0.001;
+	}
+	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
 	this.R = rotate(this.theta, this.vector);
 	var a = mat4();		// identity
-	a = mult(a, m);
-	a = mult(a, this.T);
-	a = mult(a, this.R);
-	a = mult(a, this.S);
+	a = mult(mult(mult(mult(a, m), this.T), this.R), this.S);
 	return a;
     };
     this.redraw = function() {
