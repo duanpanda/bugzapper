@@ -232,12 +232,6 @@ window.onload = function init() {
     initLights();
     initObjData();
 
-    document.getElementById("Button0").onclick = function(){radius *= 2.0;};
-    document.getElementById("Button1").onclick = function(){radius *= 0.5;};
-    document.getElementById("Button2").onclick = function(){theta += dr;};
-    document.getElementById("Button3").onclick = function(){theta -= dr;};
-    document.getElementById("Button4").onclick = function(){phi += dr;};
-    document.getElementById("Button5").onclick = function(){phi -= dr;};
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
 	for (var i = 0; i < Scene.objects.length; i++) {
