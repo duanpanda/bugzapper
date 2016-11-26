@@ -44,9 +44,17 @@ var up = vec3(0.0, 1.0, 0.0);
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
-var gameTick = 0;
-
 var capRadius = 1.01;
+var maxNumCaps = 5;
+var capsCount = 0;
+
+var intervalId = 0;
+var updateGameDelay = 80;
+var isWin = false;
+var isLost = false;
+var gameTicks = 1;
+var maxInterval = 30;
+var nextTick = maxInterval;
 
 // Game Object Class
 function GameObj() {
@@ -71,10 +79,12 @@ function GameObj() {
 	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
-    this.calcTransformMatrix = function(m, t) {
+    this.calcTransformMatrix = function(m) {
 	return m;
     };
     this.setLights = function() {
+    };
+    this.update = function() {
     };
 }
 
@@ -157,12 +167,14 @@ function Sphere() {
 	gl.uniform4fv(prg.uMaterialSpecular, this.specular);
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
-    this.calcTransformMatrix = function(m, t) {
+    this.calcTransformMatrix = function(m) {
 	// in effect, scale first, rotate second, translate third, then apply
 	// the global camera transformation m
 	var a = mat4();		// identity
 	a = mult(mult(mult(mult(a, m), this.T), this.R), this.S);
 	return a;
+    };
+    this.update = function() {
     };
 }
 
@@ -213,13 +225,9 @@ function initLights() {
 
 function initObjData() {
     theta = 0.0;
-    gameTick = 0;
+    gameTicks = 0;
     Scene.reset();
-    var sphere = new Sphere();
-    Scene.addObj(sphere);
-    for (var i = 0; i < 5; i++) {
-	Scene.addObj(new Cap());
-    };
+    Scene.addObj(new Sphere());
 }
 
 window.onload = function init() {
@@ -248,12 +256,12 @@ window.onload = function init() {
     };
     document.getElementById("Button8").onclick = toggleLight;
 
+    intervalId = window.setInterval(updateGame, updateGameDelay);
+
     render();
 };
 
 function render() {
-    gameTick++;
-
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -266,7 +274,7 @@ function render() {
 
 	transform.calculateModelView();
 	transform.push();
-	var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix, gameTick);
+	var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
 	transform.setMVMatrix(newMVMatrix);
 	transform.setMatrixUniforms();
 	transform.pop();
@@ -279,13 +287,6 @@ function render() {
 }
 
 function updateTransforms() {
-    // theta = 30 * DEGREE_TO_RADIAN;
-    // phi += dr / 5;
-    // radius += 0.01;
-    // eye = vec3(radius * Math.cos(theta) * Math.sin(phi),
-    // 	       radius * Math.sin(theta) * Math.sin(phi),
-    // 	       radius * Math.cos(phi));
-    // transform.setMVMatrix(lookAt(eye, at, up));
     displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
@@ -305,9 +306,9 @@ function Cap() {
     this.shininess = capShininess;
     this.theta = getRandomInt(0, 360);
     this.vector = vec3(Math.random(), Math.random(), Math.random());
-    this.scaleFactor = getRandomArbitrary(0.5, 1.5);
+    this.scaleFactor = getRandomArbitrary(0.1, 0.2);
+    this.mvMatrix = mat4();
     this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
-    this.T = mat4();
     this.R = rotate(this.theta, [1, 1, 1]);
     this.drawMode = gl.TRIANGLE_FAN;
     this.point = function(theta, phi) {
@@ -358,14 +359,9 @@ function Cap() {
 	gl.uniform4fv(prg.uMaterialSpecular, this.specular);
 	gl.uniform1f(prg.uShininess, this.shininess);
     };
-    this.calcTransformMatrix = function(m, t) {
-	if (this.scaleFactor < 1.2) {
-	    this.scaleFactor += 0.001;
-	}
-	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
-	this.R = rotate(this.theta, this.vector);
+    this.calcTransformMatrix = function(m) {
 	var a = mat4();		// identity
-	a = mult(mult(mult(mult(a, m), this.T), this.R), this.S);
+	a = mult(mult(mult(a, m), this.R), this.S);
 	return a;
     };
     this.redraw = function() {
@@ -375,4 +371,54 @@ function Cap() {
 	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
+    this.update = function() {
+	if (this.scaleFactor < 1.2) {
+	    this.scaleFactor += 0.005;
+	}
+	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
+	this.R = rotate(this.theta, this.vector);
+    };
 };
+
+function updateGame() {
+    gameTicks++;
+    for (var i = 0; i < Scene.objects.length; i++) {
+	var obj = Scene.objects[i];
+	if (obj.isActive) {
+	    obj.update();
+	}
+    }
+    if (gameTicks == nextTick) {
+	if (capsCount < maxNumCaps) {
+	    Scene.addObj(new Cap());
+	    capsCount++;
+	    console.log('number of caps:', capsCount);
+	}
+	nextTick = gameTicks + maxInterval;
+    }
+}
+
+function clearAllCaps() {
+    for (var i = 0; i < capsCount; i++) {
+	Scene.objects.pop();
+    }
+    capsCount = 0;
+}
+
+function resetGame() {
+    isWin = false;
+    isLost = false;
+    gameTicks = 1;
+    nextTick = maxInterval;
+    window.clearInterval(intervalId);
+    intervalId = window.setInterval(updateGame, updateGameDelay);
+}
+
+function endGame() {
+}
+
+function gameWinUpdate() {
+}
+
+function gameLostUpdate() {
+}
