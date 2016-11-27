@@ -36,8 +36,17 @@ var interactor;
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
-var capRadius = 1.01;
-var maxNumCaps = 5;
+var capTransforms = [
+    {'tx':0, 'ty':0},
+    {'tx':30, 'ty':0},
+    {'tx':30, 'ty':30},
+    {'tx':250, 'ty':120},
+    {'tx':120, 'ty':120},
+    {'tx':80, 'ty':90},
+    {'tx':100, 'ty': 30}];
+
+var capRadius = 1.02;
+var maxNumCaps = capTransforms.length;
 var capsCount = 0;
 
 var intervalId = 0;
@@ -47,6 +56,11 @@ var isLost = false;
 var gameTicks = 1;
 var maxInterval = 30;
 var nextTick = maxInterval;
+var d_elevation = 0;
+var d_azimuth = 0;
+var animCount = 0;
+var animFrames = 60;
+var isAnimating = false;
 
 // Game Object Class
 function GameObj() {
@@ -98,12 +112,9 @@ function Sphere() {
     this.diffuse = sphereDiffuse;
     this.specular = sphereSpecular;
     this.shininess = sphereShininess;
-    var s = 1.0;
-    this.S = scale3d(s, s, s);
-    this.T = translate(0.0,//getRandomArbitrary(0,1),
-		       0.0,//getRandomArbitrary(0,1),
-		       0.0);//getRandomArbitrary(0,-1));
-    this.theta = 1;
+    this.S = mat4();
+    this.T = mat4();
+    this.theta = 0;
     this.R = rotate(this.theta, [0, 1, 0]);
 
     this.triangle = function(a, b, c) {
@@ -261,6 +272,15 @@ function render() {
 
     gl.uniform1i(prg.uUpdateLight, updateLightPosition);
 
+    if (isAnimating) {
+	camera.changeElevation(d_elevation);
+	camera.changeAzimuth(d_azimuth);
+	animCount++;
+	if (animCount > animFrames) {
+	    isAnimating = false;
+	}
+    }
+
     for (var i = 0; i < Scene.objects.length; i++) {
 	var obj = Scene.objects[i];
 
@@ -290,18 +310,22 @@ function toggleLight() {
     console.log('updateLightPosition =', updateLightPosition);
 }
 
-function Cap() {
+function Cap(transformData) {
     GameObj.call(this);
     this.ambient = capAmbient;
     this.diffuse = capDiffuse;
     this.specular = capSpecular;
     this.shininess = capShininess;
-    this.theta = getRandomInt(0, 360);
-    this.vector = vec3(Math.random(), Math.random(), Math.random());
-    this.scaleFactor = getRandomArbitrary(0.1, 0.2);
+    // this.theta = getRandomInt(0, 360);
+    // this.vector = vec3(Math.random(), Math.random(), Math.random());
     this.mvMatrix = mat4();
+    this.scaleFactor = getRandomArbitrary(0.1, 0.2);
     this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
-    this.R = rotate(this.theta, [1, 1, 1]);
+    this.R = mult(rotate(transformData.tx, [1, 0, 0]),
+		  rotate(transformData.ty, [0, 1, 0]));
+    // console.log('cap theta =', this.theta);
+    // logMatrix(this.R);
+    // logMatrix(rotate(this.theta, [1, 1, 0]));
     this.drawMode = gl.TRIANGLE_FAN;
     this.point = function(theta, phi) {
 	var t = theta * DEGREE_TO_RADIAN;
@@ -364,11 +388,14 @@ function Cap() {
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
     this.update = function() {
-	if (this.scaleFactor < 1.2) {
+	if (this.scaleFactor < 1.0) {
 	    this.scaleFactor += 0.005;
 	}
 	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
-	this.R = rotate(this.theta, this.vector);
+	var RX = rotate(transformData.tx, [1, 0, 0]);
+	var RY = rotate(transformData.ty, [0, 1, 0]);
+	// this.R = rotate(this.theta, this.vector);
+	this.R = mult(RY, RX);
     };
 };
 
@@ -380,11 +407,19 @@ function updateGame() {
 	    obj.update();
 	}
     }
+
     if (gameTicks == nextTick) {
 	if (capsCount < maxNumCaps) {
-	    Scene.addObj(new Cap());
+	    Scene.addObj(new Cap(capTransforms[capsCount]));
 	    capsCount++;
 	    console.log('number of caps:', capsCount);
+	    isAnimating = true;
+	    d_elevation = (-capTransforms[capsCount-1].tx - camera.elevation) / animFrames;
+	    d_azimuth = (-capTransforms[capsCount-1].ty - camera.azimuth) / animFrames;
+	    camera.changeElevation(d_elevation);
+	    camera.changeAzimuth(d_azimuth);
+	    animCount = 0;
+	    animCount++;
 	}
 	nextTick = gameTicks + maxInterval;
     }
