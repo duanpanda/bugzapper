@@ -25,7 +25,7 @@
        }
        vLightVec = pos - light;
        vEyeVec = -pos;
-       vNormal = (uNMatrix * aVertexNormal).xyz;
+       vNormal = (uMVMatrix * aVertexNormal).xyz;
        gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
      }
     </script>
