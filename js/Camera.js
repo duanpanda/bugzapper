@@ -99,8 +99,8 @@ Camera.prototype.update = function() {
 
     var m = this.matrix;
     this.right = vec3(mat4_multiplyVec4(m, [1, 0, 0, 0]));
-    this.up = vec3(mat4_multiplyVec4(m, [0, 1, 0, 0], this.up));
-    this.normal = vec3(mat4_multiplyVec4(m, [0, 0, 1, 0], this.normal));
+    this.up = vec3(mat4_multiplyVec4(m, [0, 1, 0, 0]));
+    this.normal = vec3(mat4_multiplyVec4(m, [0, 0, 1, 0]));
 
     if (this.type == CAMERA_TRACKING_TYPE) {
 	this.position = vec3(mat4_multiplyVec4(m, [0, 0, 0, 1], this.position));
@@ -115,7 +115,5 @@ Camera.prototype.update = function() {
 };
 
 Camera.prototype.getViewTransform = function() {
-    // var m = mat4(this.matrix[0], this.matrix[1], this.matrix[2], this.matrix[3]);
-    var m = mat4_inverse(this.matrix);
-    return m;
+    return mat4_inverse(this.matrix);
 };
