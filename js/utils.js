@@ -36,9 +36,10 @@ mat4_inverse = function(matrix) {
     b[9]=(-c*D+d*z-g*x)*q; b[10]=(m*v-p*t+s*A)*q; b[11]=(-k*v+l*t-o*A)*q;
     b[12]=(-f*C+h*y-i*x)*q; b[13]=(c*C-d*y+e*x)*q; b[14]=(-m*u+p*B-r*A)*q;
     b[15]=(k*u-l*B+n*A)*q;
-    return mat4(vec4(b[0], b[1], b[2], b[3]), vec4(b[4], b[5], b[6], b[7]),
-		vec4(b[8], b[9], b[10], b[11]),
-		vec4(b[12], b[13], b[14], b[15]));
+    return mat4(vec4(b[0], b[4], b[8], b[12]),
+		vec4(b[1], b[5], b[9], b[13]),
+		vec4(b[2], b[6], b[10], b[14]),
+		vec4(b[3], b[7], b[11], b[15]));
 };
 
 function mat4_multiplyVec4(m, b) {
