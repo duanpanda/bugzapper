@@ -9,10 +9,6 @@ var updateLightPosition = false;
 
 var near = 0.2;
 var far = 5000;
-var radius = 1.5;
-var theta = 0.0;
-var phi = 0.0;
-var dr = 5.0 * DEGREE_TO_RADIAN;
 var fovy = 90;
 
 var va = vec4(0.0, 0.0, -1.0, 1.0);
@@ -36,10 +32,6 @@ var capShininess = 200.0;
 var transform;
 var camera;
 var interactor;
-
-var eye;
-var at = vec3(0.0, 0.0, 0.0);
-var up = vec3(0.0, 1.0, 0.0);
 
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
