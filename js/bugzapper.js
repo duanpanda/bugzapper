@@ -36,17 +36,17 @@ var interactor;
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
-var capTransforms = [
-    {'tx':0, 'ty':0},
-    {'tx':30, 'ty':0},
-    {'tx':30, 'ty':30},
-    {'tx':250, 'ty':120},
-    {'tx':120, 'ty':120},
-    {'tx':80, 'ty':90},
-    {'tx':100, 'ty': 30}];
+// var capTransforms = [
+//     {'tx':0, 'ty':0},
+//     {'tx':30, 'ty':0},
+//     {'tx':30, 'ty':30},
+//     {'tx':250, 'ty':120},
+//     {'tx':120, 'ty':120},
+//     {'tx':80, 'ty':90},
+//     {'tx':100, 'ty': 30}];
 
 var capRadius = 1.02;
-var maxNumCaps = capTransforms.length;
+var maxNumCaps = 5;//capTransforms.length;
 var capsCount = 0;
 
 var intervalId = 0;
@@ -61,7 +61,7 @@ var d_azimuth = 0;
 var animCount = 0;
 var animFrames = 60;
 var isAnimating = false;
-var lockedCap = null;
+var lockedCapIndex = -1;
 
 // Game Object Class
 function GameObj() {
@@ -281,7 +281,7 @@ function render() {
 	animCount++;
 	if (animCount > animFrames) {
 	    isAnimating = false;
-	    lockedCap = Scene.objects[Scene.objects.length - 1];
+	    lockedCapIndex = Scene.objects.length - 1;
 	}
     }
 
@@ -325,6 +325,8 @@ function Cap(transformData) {
     // this.vector = vec3(Math.random(), Math.random(), Math.random());
     this.mvMatrix = mat4();
     this.scaleFactor = getRandomArbitrary(0.1, 0.2);
+    this.tx = transformData.tx;
+    this.ty = transformData.ty;
     this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
     this.R = mult(rotate(transformData.tx, [1, 0, 0]),
 		  rotate(transformData.ty, [0, 1, 0]));
@@ -415,13 +417,14 @@ function updateGame() {
 
     if (gameTicks == nextTick) {
 	if (capsCount < maxNumCaps) {
-	    Scene.addObj(new Cap(capTransforms[capsCount]));
+	    var a = genNewCapData();
+	    Scene.addObj(new Cap(a));
 	    capsCount++;
 	    console.log('number of caps:', capsCount);
 
 	    isAnimating = true;
-	    d_elevation = (-capTransforms[capsCount-1].tx - camera.elevation) / animFrames;
-	    d_azimuth = (-capTransforms[capsCount-1].ty - camera.azimuth) / animFrames;
+	    d_elevation = (-a.tx - camera.elevation) / animFrames;
+	    d_azimuth = (-a.ty - camera.azimuth) / animFrames;
 	    camera.changeElevation(d_elevation);
 	    camera.changeAzimuth(d_azimuth);
 	    animCount = 1;
@@ -463,8 +466,11 @@ function onMouseDown(event) {
     var gly = 2 * (canvas.height - y) / canvas.height - 1;
     var polar = xy_to_polar(glx, gly);
     console.log('[' + polar[0] + ', ' + polar[1] + ']');
-    if (lockedCap) {
-	lockedCap.isActive = false;
+    if (lockedCapIndex >= 0) {
+	Scene.objects.splice(lockedCapIndex, 1);
+	capsCount--;
+	console.log(Scene.objects.length);
+	lockedCapIndex = -1;
     }
 }
 
@@ -478,4 +484,8 @@ function xy_to_polar(x, y) {
     }
     var r = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     return [r, theta];
+}
+
+function genNewCapData() {
+    return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
 }
