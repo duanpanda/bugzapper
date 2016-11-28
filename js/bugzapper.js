@@ -61,6 +61,7 @@ var d_azimuth = 0;
 var animCount = 0;
 var animFrames = 60;
 var isAnimating = false;
+var lockedCap = null;
 
 // Game Object Class
 function GameObj() {
@@ -261,6 +262,8 @@ window.onload = function init() {
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
+    canvas.addEventListener('mousedown', onMouseDown);
+
     render();
 };
 
@@ -278,21 +281,23 @@ function render() {
 	animCount++;
 	if (animCount > animFrames) {
 	    isAnimating = false;
+	    lockedCap = Scene.objects[Scene.objects.length - 1];
 	}
     }
 
     for (var i = 0; i < Scene.objects.length; i++) {
 	var obj = Scene.objects[i];
+	if (obj.isActive) {
+	    transform.calculateModelView();
+	    transform.push();
+	    var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
+	    transform.setMVMatrix(newMVMatrix);
+	    transform.setMatrixUniforms();
+	    transform.pop();
 
-	transform.calculateModelView();
-	transform.push();
-	var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
-	transform.setMVMatrix(newMVMatrix);
-	transform.setMatrixUniforms();
-	transform.pop();
-
-	obj.setLights();
-	obj.redraw();
+	    obj.setLights();
+	    obj.redraw();
+	}
     }
 
     requestAnimFrame(render);
@@ -413,13 +418,13 @@ function updateGame() {
 	    Scene.addObj(new Cap(capTransforms[capsCount]));
 	    capsCount++;
 	    console.log('number of caps:', capsCount);
+
 	    isAnimating = true;
 	    d_elevation = (-capTransforms[capsCount-1].tx - camera.elevation) / animFrames;
 	    d_azimuth = (-capTransforms[capsCount-1].ty - camera.azimuth) / animFrames;
 	    camera.changeElevation(d_elevation);
 	    camera.changeAzimuth(d_azimuth);
-	    animCount = 0;
-	    animCount++;
+	    animCount = 1;
 	}
 	nextTick = gameTicks + maxInterval;
     }
@@ -448,4 +453,29 @@ function gameWinUpdate() {
 }
 
 function gameLostUpdate() {
+}
+
+function onMouseDown(event) {
+    var rect = canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+    var glx = 2 * x / canvas.width - 1;
+    var gly = 2 * (canvas.height - y) / canvas.height - 1;
+    var polar = xy_to_polar(glx, gly);
+    console.log('[' + polar[0] + ', ' + polar[1] + ']');
+    if (lockedCap) {
+	lockedCap.isActive = false;
+    }
+}
+
+function xy_to_polar(x, y) {
+    var theta = Math.atan(y / x);
+    if ((y > 0 && x < 0) || (y < 0 && x < 0)) {
+	theta += Math.PI;
+    }
+    if (theta < 0) {
+	theta += Math.PI * 2;
+    }
+    var r = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    return [r, theta];
 }

@@ -105,7 +105,7 @@ CameraInteractor.prototype.update = function(){
 };
 
 CameraInteractor.prototype.dolly = function(value) {
-    if (value>0){
+    if (value > 0){
  	this.dloc += this.dstep;
     } else{
  	this.dloc -= this.dstep;
