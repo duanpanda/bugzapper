@@ -47,7 +47,6 @@ const CAMERA_TRACKING_TYPE = 2;
 
 var capRadius = 1.02;
 var maxNumCaps = 5;//capTransforms.length;
-var capsCount = 0;
 
 var intervalId = 0;
 var updateGameDelay = 80;
@@ -62,6 +61,9 @@ var animCount = 0;
 var animFrames = 60;
 var isAnimating = false;
 var lockedCapIndex = -1;
+
+var sphere = null;
+var caps = [];
 
 // Game Object Class
 function GameObj() {
@@ -95,16 +97,10 @@ function GameObj() {
     };
 }
 
-//  Singleton
-var Scene = {
-    objects : [],
-    addObj : function(obj) {
-	Scene.objects.push(obj);
-    },
-    reset : function() {
-	Scene.objects = [];
-    }
-};
+
+function addCap(obj) {
+    caps.push(obj);
+}
 
 // Sphere
 function Sphere() {
@@ -228,10 +224,8 @@ function initLights() {
 }
 
 function initObjData() {
-    theta = 0.0;
     gameTicks = 0;
-    Scene.reset();
-    Scene.addObj(new Sphere());
+    sphere = new Sphere();
 }
 
 window.onload = function init() {
@@ -246,23 +240,20 @@ window.onload = function init() {
 
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
-	for (var i = 0; i < Scene.objects.length; i++) {
-	    Scene.objects[i].genPoints();
-	}
+	sphere.genPoints();
     };
     document.getElementById("Button7").onclick = function(){
 	if (numTimesToSubdivide > 0) {
 	    numTimesToSubdivide--;
 	}
-	for (var i = 0; i < Scene.objects.length; i++) {
-	    Scene.objects[i].genPoints();
-	}
+	sphere.genPoints();
     };
     document.getElementById("Button8").onclick = toggleLight;
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
     canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('keydown', onKeyDown);
 
     render();
 };
@@ -281,20 +272,27 @@ function render() {
 	animCount++;
 	if (animCount > animFrames) {
 	    isAnimating = false;
-	    lockedCapIndex = Scene.objects.length - 1;
 	}
     }
 
-    for (var i = 0; i < Scene.objects.length; i++) {
-	var obj = Scene.objects[i];
+    transform.calculateModelView();
+    transform.push();
+    var newMVMatrix = sphere.calcTransformMatrix(transform.mvMatrix);
+    transform.setMVMatrix(newMVMatrix);
+    transform.setMatrixUniforms();
+    transform.pop();
+    sphere.setLights();
+    sphere.redraw();
+
+    for (var i = 0; i < caps.length; i++) {
+	var obj = caps[i];
 	if (obj.isActive) {
 	    transform.calculateModelView();
 	    transform.push();
-	    var newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
+	    newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
 	    transform.setMVMatrix(newMVMatrix);
 	    transform.setMatrixUniforms();
 	    transform.pop();
-
 	    obj.setLights();
 	    obj.redraw();
 	}
@@ -404,40 +402,31 @@ function Cap(transformData) {
 	// this.R = rotate(this.theta, this.vector);
 	this.R = mult(RY, RX);
     };
+    this.getTransformData = function() {
+	return transformData;
+    };
 };
 
 function updateGame() {
     gameTicks++;
-    for (var i = 0; i < Scene.objects.length; i++) {
-	var obj = Scene.objects[i];
-	if (obj.isActive) {
-	    obj.update();
-	}
+    sphere.update();
+    for (var i = 0; i < caps.length; i++) {
+	caps[i].update();
     }
 
     if (gameTicks == nextTick) {
-	if (capsCount < maxNumCaps) {
+	if (caps.length < maxNumCaps) {
 	    var a = genNewCapData();
-	    Scene.addObj(new Cap(a));
-	    capsCount++;
-	    console.log('number of caps:', capsCount);
-
-	    isAnimating = true;
-	    d_elevation = (-a.tx - camera.elevation) / animFrames;
-	    d_azimuth = (-a.ty - camera.azimuth) / animFrames;
-	    camera.changeElevation(d_elevation);
-	    camera.changeAzimuth(d_azimuth);
-	    animCount = 1;
+	    addCap(new Cap(a));
+	    console.log('num bacterias:', caps.length);
+	    document.getElementById("num-bacterias").innerHTML = caps.length;
 	}
 	nextTick = gameTicks + maxInterval;
     }
 }
 
 function clearAllCaps() {
-    for (var i = 0; i < capsCount; i++) {
-	Scene.objects.pop();
-    }
-    capsCount = 0;
+    caps = [];
 }
 
 function resetGame() {
@@ -465,12 +454,12 @@ function onMouseDown(event) {
     var glx = 2 * x / canvas.width - 1;
     var gly = 2 * (canvas.height - y) / canvas.height - 1;
     var polar = xy_to_polar(glx, gly);
-    console.log('[' + polar[0] + ', ' + polar[1] + ']');
-    if (lockedCapIndex >= 0) {
-	Scene.objects.splice(lockedCapIndex, 1);
-	capsCount--;
-	console.log(Scene.objects.length);
+    // console.log('[' + polar[0] + ', ' + polar[1] + ']');
+    if (lockedCapIndex >= 0 && !isAnimating) {
+	console.log('hit', lockedCapIndex);
+	caps.splice(lockedCapIndex, 1);
 	lockedCapIndex = -1;
+	document.getElementById('num-bacterias').innerHTML = caps.length;
     }
 }
 
@@ -488,4 +477,33 @@ function xy_to_polar(x, y) {
 
 function genNewCapData() {
     return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
+}
+
+function onKeyDown(event) {
+    if (event.keyCode == 13) {	// enter
+	console.log('enter');
+	lockACap();
+    }
+    // if (event.keyCode == 38) {	// up arrow
+    // 	console.log('up');
+    // } else if (event.keyCode == 40) { // down arrow
+    // 	console.log('down');
+    // } else if (event.keyCode == 37) { // left arrow
+    // 	console.log('left');
+    // } else if (event.keyCode == 39) { // right arrow
+    // 	console.log('right');
+    // }
+}
+
+function lockACap() {
+    isAnimating = true;
+    if (caps.length == 0) return;
+    var i = getRandomInt(0, caps.length);
+    var a = caps[i].getTransformData();
+    d_elevation = (-a.tx - camera.elevation) / animFrames;
+    d_azimuth = (-a.ty - camera.azimuth) / animFrames;
+    camera.changeElevation(d_elevation);
+    camera.changeAzimuth(d_azimuth);
+    animCount = 1;
+    lockedCapIndex = i;
 }
