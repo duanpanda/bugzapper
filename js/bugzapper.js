@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 5;
+var numTimesToSubdivide = 0;
 var updateLightPosition = false;
 
 var near = 0.2;
@@ -37,7 +37,7 @@ const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
 var capRadius = 1.02;
-var maxNumCaps = 5;
+var maxNumCaps = 1;
 
 var intervalId = 0;
 var updateGameDelay = 80;
@@ -244,7 +244,7 @@ window.onload = function init() {
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
-    canvas.addEventListener('click', onMouseClick);
+    canvas.addEventListener('mousedown', onMouseDown);
     window.addEventListener('keydown', onKeyDown);
 
     render();
@@ -404,8 +404,16 @@ function updateGame() {
     for (var i = 0; i < caps.length; i++) {
 	caps[i].update();
 	if (isInLockingArea(caps[i])) {
-	    console.log(i + ' cap is in locking area.');
+	    document.getElementById('is-locked').innerHTML = i + ' is LOCKED';
+	    lockedCapIndex = i;
+	} else {
+	    if (lockedCapIndex == i) {
+		document.getElementById('is-locked').innerHTML = '';
+	    }
 	}
+    }
+    if (lockedCapIndex == -1) {
+	document.getElementById('is-locked').innerHTML = '';
     }
 
     if (gameTicks == nextTick) {
@@ -441,14 +449,7 @@ function gameWinUpdate() {
 function gameLostUpdate() {
 }
 
-function onMouseClick(event) {
-    // var rect = canvas.getBoundingClientRect();
-    // var x = event.clientX - rect.left;
-    // var y = event.clientY - rect.top;
-    // var glx = 2 * x / canvas.width - 1;
-    // var gly = 2 * (canvas.height - y) / canvas.height - 1;
-    // var polar = xy_to_polar(glx, gly);
-    // console.log('[' + polar[0] + ', ' + polar[1] + ']');
+function onMouseDown(event) {
     if (lockedCapIndex >= 0 && !isAnimating) {
 	console.log('hit', lockedCapIndex);
 	caps.splice(lockedCapIndex, 1);
@@ -457,20 +458,9 @@ function onMouseClick(event) {
     }
 }
 
-// function xy_to_polar(x, y) {
-//     var theta = Math.atan(y / x);
-//     if ((y > 0 && x < 0) || (y < 0 && x < 0)) {
-// 	theta += Math.PI;
-//     }
-//     if (theta < 0) {
-// 	theta += Math.PI * 2;
-//     }
-//     var r = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-//     return [r, theta];
-// }
-
 function genNewCapData() {
-    return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
+    // return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
+    return {'tx': 154, 'ty': 83};
 }
 
 function onKeyDown(event) {
@@ -535,4 +525,15 @@ function nextCap(dir) {
 }
 
 function isInLockingArea(cap) {
+    var t = cap.getTransformData();
+    var elevation = camera.elevation;
+    if (elevation < 0) {
+	elevation += 360;
+    }
+    var azimuth = camera.azimuth;
+    if (azimuth < 0) {
+	azimuth += 360;
+    }
+    return Math.abs(t.tx - elevation) < 10 &&
+	Math.abs(t.ty - azimuth) < 10;
 }
