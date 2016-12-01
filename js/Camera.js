@@ -1,6 +1,5 @@
 function Camera(type) {
     this.matrix = mat4();	// camera matrix which is inverse of mvMatrix
-    this.mvMatrix = mat4();
     this.up = vec3(0.0, 0.0, 0.0);
     this.right = vec3(0.0, 0.0, 0.0);
     this.normal = vec3(0.0, 0.0, 0.0);
@@ -90,15 +89,15 @@ Camera.prototype.update = function() {
 	var T = translate(this.position[0], this.position[1], this.position[2]);
 	var RY = rotate(this.azimuth, [0, 1, 0]);
 	var RX = rotate(this.elevation, [1, 0, 0]);
-	this.mvMatrix = mult(mult(mult(I, RX), RY), T);
-	this.matrix = mat4_inverse(this.mvMatrix);
+	// this.matrix = mult(mult(mult(I, RX), RY), T);
+	this.matrix = mult(mult(mult(I, T), RY), RX);
     } else {
 	I = mat4();
 	RY = rotate(this.azimuth, [0, 1, 0]);
 	RX = rotate(this.elevation, [1, 0, 0]);
 	T = translate(this.position[0], this.position[1], this.position[2]);
-	this.mvMatrix = mult(mult(mult(I, T), RX), RY);
-	this.matrix = mat4_inverse(this.mvMatrix);
+	// this.matrix = mult(mult(mult(I, T), RX), RY);
+	this.matrix = mult(mult(mult(I, RY), RX), T);
     }
 
     var m = this.matrix;
@@ -119,5 +118,5 @@ Camera.prototype.update = function() {
 };
 
 Camera.prototype.getViewTransform = function() {
-    return this.mvMatrix;
+    return mat4_inverse(this.matrix);
 };

@@ -176,7 +176,7 @@ function configure() {
     gl.enable(gl.DEPTH_TEST);
 
     camera = new Camera(CAMERA_ORBIT_TYPE);
-    camera.goHome([0.0, 0.0, -1.5]);
+    camera.goHome([0.0, 0.0, 1.5]);
 
     interactor = new CameraInteractor(camera, canvas);
 
@@ -494,16 +494,16 @@ function lockACap(ci) {
     if (caps.length == 0) return;
     isAnimating = true;
     var a = caps[ci].getTransformData();
-    var e = -a.tx - camera.elevation;
-    var z = -a.ty - camera.azimuth;
+    var e = a.tx - camera.elevation;
+    var z = a.ty - camera.azimuth;
     if (Math.abs(e) > 180 || Math.abs(z) > 180) {
 	animFrames = STD_ANIM_FRAMES;
     } else {
 	animFrames = STD_ANIM_FRAMES / 2;
     }
     console.log('animFrames', animFrames);
-    d_elevation = (-a.tx - camera.elevation) / animFrames;
-    d_azimuth = (-a.ty - camera.azimuth) / animFrames;
+    d_elevation = (a.tx - camera.elevation) / animFrames;
+    d_azimuth = (a.ty - camera.azimuth) / animFrames;
     camera.changeElevation(d_elevation);
     camera.changeAzimuth(d_azimuth);
     animCount = 1;
