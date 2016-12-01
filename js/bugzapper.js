@@ -36,17 +36,8 @@ var interactor;
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
-// var capTransforms = [
-//     {'tx':0, 'ty':0},
-//     {'tx':30, 'ty':0},
-//     {'tx':30, 'ty':30},
-//     {'tx':250, 'ty':120},
-//     {'tx':120, 'ty':120},
-//     {'tx':80, 'ty':90},
-//     {'tx':100, 'ty': 30}];
-
 var capRadius = 1.02;
-var maxNumCaps = 5;//capTransforms.length;
+var maxNumCaps = 5;
 
 var intervalId = 0;
 var updateGameDelay = 80;
@@ -58,7 +49,8 @@ var nextTick = maxInterval;
 var d_elevation = 0;
 var d_azimuth = 0;
 var animCount = 0;
-var animFrames = 60;
+const STD_ANIM_FRAMES = 60;
+var animFrames = STD_ANIM_FRAMES;
 var isAnimating = false;
 var lockedCapIndex = -1;
 
@@ -252,7 +244,7 @@ window.onload = function init() {
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
-    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('click', onMouseClick);
     window.addEventListener('keydown', onKeyDown);
 
     render();
@@ -267,11 +259,15 @@ function render() {
     gl.uniform1i(prg.uUpdateLight, updateLightPosition);
 
     if (isAnimating) {
-	camera.changeElevation(d_elevation);
-	camera.changeAzimuth(d_azimuth);
-	animCount++;
-	if (animCount > animFrames) {
+	if (animCount >= animFrames) {
 	    isAnimating = false;
+	    console.log(caps[lockedCapIndex].getTransformData());
+	    console.log('elevation', camera.elevation);
+	    console.log('azimuth', camera.azimuth);
+	} else {
+	    camera.changeElevation(d_elevation);
+	    camera.changeAzimuth(d_azimuth);
+	    animCount++;
 	}
     }
 
@@ -290,6 +286,7 @@ function render() {
 	    transform.calculateModelView();
 	    transform.push();
 	    newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
+	    // console.log(vec3(mat4_multiplyVec4(newMVMatrix, vec4(obj.normals[0])))); // the locked one should be close to [0, 0, 1.02]
 	    transform.setMVMatrix(newMVMatrix);
 	    transform.setMatrixUniforms();
 	    transform.pop();
@@ -302,6 +299,7 @@ function render() {
 }
 
 function updateTransforms() {
+    transform.calculateModelView();
     displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
@@ -319,18 +317,12 @@ function Cap(transformData) {
     this.diffuse = capDiffuse;
     this.specular = capSpecular;
     this.shininess = capShininess;
-    // this.theta = getRandomInt(0, 360);
-    // this.vector = vec3(Math.random(), Math.random(), Math.random());
-    this.mvMatrix = mat4();
     this.scaleFactor = getRandomArbitrary(0.1, 0.2);
     this.tx = transformData.tx;
     this.ty = transformData.ty;
     this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
     this.R = mult(rotate(transformData.tx, [1, 0, 0]),
 		  rotate(transformData.ty, [0, 1, 0]));
-    // console.log('cap theta =', this.theta);
-    // logMatrix(this.R);
-    // logMatrix(rotate(this.theta, [1, 1, 0]));
     this.drawMode = gl.TRIANGLE_FAN;
     this.point = function(theta, phi) {
 	var t = theta * DEGREE_TO_RADIAN;
@@ -399,7 +391,6 @@ function Cap(transformData) {
 	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
 	var RX = rotate(transformData.tx, [1, 0, 0]);
 	var RY = rotate(transformData.ty, [0, 1, 0]);
-	// this.R = rotate(this.theta, this.vector);
 	this.R = mult(RY, RX);
     };
     this.getTransformData = function() {
@@ -412,6 +403,9 @@ function updateGame() {
     sphere.update();
     for (var i = 0; i < caps.length; i++) {
 	caps[i].update();
+	if (isInLockingArea(caps[i])) {
+	    console.log(i + ' cap is in locking area.');
+	}
     }
 
     if (gameTicks == nextTick) {
@@ -447,13 +441,13 @@ function gameWinUpdate() {
 function gameLostUpdate() {
 }
 
-function onMouseDown(event) {
-    var rect = canvas.getBoundingClientRect();
-    var x = event.clientX - rect.left;
-    var y = event.clientY - rect.top;
-    var glx = 2 * x / canvas.width - 1;
-    var gly = 2 * (canvas.height - y) / canvas.height - 1;
-    var polar = xy_to_polar(glx, gly);
+function onMouseClick(event) {
+    // var rect = canvas.getBoundingClientRect();
+    // var x = event.clientX - rect.left;
+    // var y = event.clientY - rect.top;
+    // var glx = 2 * x / canvas.width - 1;
+    // var gly = 2 * (canvas.height - y) / canvas.height - 1;
+    // var polar = xy_to_polar(glx, gly);
     // console.log('[' + polar[0] + ', ' + polar[1] + ']');
     if (lockedCapIndex >= 0 && !isAnimating) {
 	console.log('hit', lockedCapIndex);
@@ -463,17 +457,17 @@ function onMouseDown(event) {
     }
 }
 
-function xy_to_polar(x, y) {
-    var theta = Math.atan(y / x);
-    if ((y > 0 && x < 0) || (y < 0 && x < 0)) {
-	theta += Math.PI;
-    }
-    if (theta < 0) {
-	theta += Math.PI * 2;
-    }
-    var r = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-    return [r, theta];
-}
+// function xy_to_polar(x, y) {
+//     var theta = Math.atan(y / x);
+//     if ((y > 0 && x < 0) || (y < 0 && x < 0)) {
+// 	theta += Math.PI;
+//     }
+//     if (theta < 0) {
+// 	theta += Math.PI * 2;
+//     }
+//     var r = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+//     return [r, theta];
+// }
 
 function genNewCapData() {
     return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
@@ -482,28 +476,63 @@ function genNewCapData() {
 function onKeyDown(event) {
     if (event.keyCode == 13) {	// enter
 	console.log('enter');
-	lockACap();
+	caps.sort(compareCapsByTx);
+	lockACap(0);
     }
-    // if (event.keyCode == 38) {	// up arrow
-    // 	console.log('up');
-    // } else if (event.keyCode == 40) { // down arrow
-    // 	console.log('down');
-    // } else if (event.keyCode == 37) { // left arrow
-    // 	console.log('left');
-    // } else if (event.keyCode == 39) { // right arrow
-    // 	console.log('right');
-    // }
+    if (event.keyCode == 38) {	// up arrow
+	console.log('up');
+    } else if (event.keyCode == 40) { // down arrow
+	console.log('down');
+    } else if (event.keyCode == 37) { // left arrow
+	console.log('left');
+    } else if (event.keyCode == 39) { // right arrow
+	console.log('right');
+    }
 }
 
-function lockACap() {
-    isAnimating = true;
+function lockACap(ci) {
     if (caps.length == 0) return;
-    var i = getRandomInt(0, caps.length);
-    var a = caps[i].getTransformData();
+    isAnimating = true;
+    var a = caps[ci].getTransformData();
+    var e = -a.tx - camera.elevation;
+    var z = -a.ty - camera.azimuth;
+    if (Math.abs(e) > 180 || Math.abs(z) > 180) {
+	animFrames = STD_ANIM_FRAMES;
+    } else {
+	animFrames = STD_ANIM_FRAMES / 2;
+    }
+    console.log('animFrames', animFrames);
     d_elevation = (-a.tx - camera.elevation) / animFrames;
     d_azimuth = (-a.ty - camera.azimuth) / animFrames;
     camera.changeElevation(d_elevation);
     camera.changeAzimuth(d_azimuth);
     animCount = 1;
-    lockedCapIndex = i;
+    lockedCapIndex = ci;
+}
+
+// tx is the angle that a cap rotates about the x axis
+function compareCapsByTx(a, b) {
+    return a.tx - b.tx;
+}
+
+function compareCapsByTy(a, b) {
+    return a.ty - b.ty;
+}
+
+function nextCap(dir) {
+    switch (dir) {
+    case "up":
+	caps.sort(compareCapsByTx);
+	break;
+    case "down":
+	caps.sort(compareCapsByTx);
+	break;
+    case "left":
+	break;
+    case "right":
+	break;
+    }
+}
+
+function isInLockingArea(cap) {
 }
