@@ -1,9 +1,11 @@
 function Camera(type) {
-    this.matrix = mat4();
-    this.up = vec3();
-    this.right = vec3();
-    this.normal = vec3();
-    this.home = vec3();
+    this.matrix = mat4();	// camera matrix which is inverse of mvMatrix
+    this.mvMatrix = mat4();
+    this.up = vec3(0.0, 0.0, 0.0);
+    this.right = vec3(0.0, 0.0, 0.0);
+    this.normal = vec3(0.0, 0.0, 0.0);
+    this.position = vec3(0.0, 0.0, 0.0);
+    this.home = vec3(0.0, 0.0, 0.0);
     this.azimuth = 0.0;
     this.elevation = 0.0;
     this.type = type;
@@ -88,13 +90,15 @@ Camera.prototype.update = function() {
 	var T = translate(this.position[0], this.position[1], this.position[2]);
 	var RY = rotate(this.azimuth, [0, 1, 0]);
 	var RX = rotate(this.elevation, [1, 0, 0]);
-	this.matrix = mat4_inverse(mult(mult(mult(I, RX), RY), T));
+	this.mvMatrix = mult(mult(mult(I, RX), RY), T);
+	this.matrix = mat4_inverse(this.mvMatrix);
     } else {
 	I = mat4();
 	RY = rotate(this.azimuth, [0, 1, 0]);
 	RX = rotate(this.elevation, [1, 0, 0]);
 	T = translate(this.position[0], this.position[1], this.position[2]);
-	this.matrix = mat4_inverse(mult(mult(mult(I, T), RX), RY));
+	this.mvMatrix = mult(mult(mult(I, T), RX), RY);
+	this.matrix = mat4_inverse(this.mvMatrix);
     }
 
     var m = this.matrix;
@@ -103,7 +107,7 @@ Camera.prototype.update = function() {
     this.normal = vec3(mat4_multiplyVec4(m, [0, 0, 1, 0]));
 
     if (this.type == CAMERA_TRACKING_TYPE) {
-	this.position = vec3(mat4_multiplyVec4(m, [0, 0, 0, 1], this.position));
+	this.position = vec3(mat4_multiplyVec4(m, vec4([0, 0, 0])));
     }
 
     if (this.hookRenderer) {
@@ -115,5 +119,5 @@ Camera.prototype.update = function() {
 };
 
 Camera.prototype.getViewTransform = function() {
-    return mat4_inverse(this.matrix);
+    return this.mvMatrix;
 };
