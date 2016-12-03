@@ -6,6 +6,7 @@ const DEGREE_TO_RADIAN = Math.PI / 180;
 
 var numTimesToSubdivide = 3;
 var updateLightPosition = false;
+var disableLighting = false;
 
 var near = 0.2;
 var far = 5000;
@@ -62,9 +63,11 @@ var caps = [];
 function GameObj() {
     this.vertices = [];
     this.normals = [];
+    this.colors = [];
     this.vbo = gl.createBuffer();
-    this.ibo = null;
+    this.cbo = gl.createBuffer();
     this.nbo = gl.createBuffer();
+    this.color = vec4(0.0, 0.0, 0.0, 1.0);
 
     // visible parts
     this.beginVIndex = 0;
@@ -77,9 +80,29 @@ function GameObj() {
     this.redraw = function() {
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.vertexAttribPointer(prg.aVertexPosition, 4, gl.FLOAT, false, 0, 0);
-	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
-	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
+	if (disableLighting) {
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.cbo);
+	    gl.enableVertexAttribArray(prg.aVertexColor);
+	    gl.disableVertexAttribArray(prg.aVertexNormal);
+	    gl.vertexAttribPointer(prg.aVertexColor, 4, gl.FLOAT, false, 0, 0);
+	} else {
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
+	    gl.enableVertexAttribArray(prg.aVertexNormal);
+	    gl.disableVertexAttribArray(prg.aVertexColor);
+	    gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
+	}
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
+    };
+    this.setColor = function(c) {
+	this.color = c;
+	if (this.colors.length != this.vertices.length) {
+	    this.colors = new Array(this.vertices.length);
+	}
+	for (var i = 0; i < this.colors.length; i++) {
+	    this.colors[i] = c;
+	}
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.cbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.colors), gl.STATIC_DRAW);
     };
 }
 
@@ -145,6 +168,8 @@ function Sphere() {
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
+
+	this.setColor(sphereDiffuse);
     };
     this.genPoints();
     this.setLights = function() {
@@ -215,6 +240,9 @@ function initProgram() {
     prg.aVertexPosition = gl.getAttribLocation(prg, "aVertexPosition");
     gl.enableVertexAttribArray(prg.aVertexPosition);
 
+    prg.aVertexColor = gl.getAttribLocation(prg, "aVertexColor");
+    gl.enableVertexAttribArray(prg.aVertexColor);
+
     prg.uMVMatrix = gl.getUniformLocation(prg, "uMVMatrix");
     prg.uNMatrix = gl.getUniformLocation(prg, "uNMatrix");
     prg.uPMatrix = gl.getUniformLocation(prg, "uPMatrix");
@@ -227,6 +255,7 @@ function initProgram() {
     prg.uLightSpecular = gl.getUniformLocation(prg, "uLightSpecular");
     prg.uLightPosition = gl.getUniformLocation(prg, "uLightPosition");
     prg.uUpdateLight = gl.getUniformLocation(prg, "uUpdateLight");
+    prg.uPerVertexColor = gl.getUniformLocation(prg, "uPerVertexColor");
 }
 
 function initLights() {
@@ -254,14 +283,17 @@ window.onload = function init() {
     document.getElementById("Button6").onclick = function(){
 	numTimesToSubdivide++;
 	sphere.genPoints();
+	sphere.setColor(sphereDiffuse);
     };
     document.getElementById("Button7").onclick = function(){
 	if (numTimesToSubdivide > 0) {
 	    numTimesToSubdivide--;
 	}
 	sphere.genPoints();
+	sphere.setColor(sphereDiffuse);
     };
-    document.getElementById("Button8").onclick = toggleLight;
+    document.getElementById("Button8").onclick = toggleLightPos;
+    document.getElementById("Button1").onclick = toggleLighting;
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
@@ -278,6 +310,7 @@ function render() {
     updateTransforms();
 
     gl.uniform1i(prg.uUpdateLight, updateLightPosition);
+    gl.uniform1i(prg.uPerVertexColor, disableLighting);
 
     if (isAnimating) {
 	if (animCount >= animFrames) {
@@ -327,9 +360,14 @@ function updateTransforms() {
     transform.calculatePerspective(p);
 }
 
-function toggleLight() {
+function toggleLightPos() {
     updateLightPosition = !updateLightPosition;
     console.log('updateLightPosition =', updateLightPosition);
+}
+
+function toggleLighting() {
+    disableLighting = !disableLighting;
+    console.log('disableLighting =', disableLighting);
 }
 
 function Cap(transformData) {
@@ -385,6 +423,10 @@ function Cap(transformData) {
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.cbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.colors), gl.STATIC_DRAW);
+
+	this.setColor(capDiffuse);
     };
     this.genPoints();
     this.setLights = function() {
@@ -401,8 +443,17 @@ function Cap(transformData) {
     this.redraw = function() {
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.vertexAttribPointer(prg.aVertexPosition, 4, gl.FLOAT, false, 0, 0);
-	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
-	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
+	if (disableLighting) {
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.cbo);
+	    gl.enableVertexAttribArray(prg.aVertexColor);
+	    gl.disableVertexAttribArray(prg.aVertexNormal);
+	    gl.vertexAttribPointer(prg.aVertexColor, 4, gl.FLOAT, false, 0, 0);
+	} else {
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
+	    gl.enableVertexAttribArray(prg.aVertexNormal);
+	    gl.disableVertexAttribArray(prg.aVertexColor);
+	    gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
+	}
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
     this.update = function() {

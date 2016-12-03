@@ -8,14 +8,20 @@
     <script id="vertex-shader" type="x-shader/x-vertex">
      attribute vec4 aVertexPosition;
      attribute vec4 aVertexNormal;
+     attribute vec4 aVertexColor;
      uniform mat4 uMVMatrix;
      uniform mat4 uNMatrix;
      uniform mat4 uPMatrix;
      uniform vec4 uLightPosition;
      uniform bool uUpdateLight;
+     uniform bool uPerVertexColor;
      varying vec3 vNormal, vLightVec, vEyeVec;
+     varying vec4 vFinalColor;
 
      void main(void) {
+     if (uPerVertexColor) {
+       vFinalColor = aVertexColor;
+     } else {
        vec3 pos = (uMVMatrix * aVertexPosition).xyz;
        vec3 light;
        if (uUpdateLight) {
@@ -26,6 +32,7 @@
        vLightVec = pos - light;
        vEyeVec = -pos;
        vNormal = (uNMatrix * aVertexNormal).xyz;
+     }
        gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
      }
     </script>
@@ -41,9 +48,15 @@
      uniform vec4 uMaterialSpecular;
      uniform float uShininess;
 
+     uniform bool uPerVertexColor;
+
      varying vec3 vNormal, vLightVec, vEyeVec;
+     varying vec4 vFinalColor;
 
      void main(void) {
+     if (uPerVertexColor) {
+       gl_FragColor = vFinalColor;
+     } else {
        vec4 fColor;
 
        vec3 L = normalize(vLightVec);
@@ -64,6 +77,7 @@
 
        gl_FragColor = fColor;
      }
+     }
     </script>
 
     <script type="text/javascript" src="common/webgl-utils.js"></script>
@@ -81,10 +95,12 @@
       Oops ... your browser doesn't support the HTML5 canvas element
     </canvas>
     <p>Press Enter key to lock a bacteria, and then click left mouse button to eradicate it.</p>
-    <button id = "Button6">Increase Subdivisions</button>
-    <button id = "Button7">Decrease Subdivisions</button>
+    <button id="Button6">Increase Subdivisions</button>
+    <button id="Button7">Decrease Subdivisions</button>
     <p> </p>
-    <button id = "Button8">Toggle Updating Light Position</button>
+    <button id="Button8">Toggle Updating Light Position</button>
+    <p></p>
+    <button id="Button1">Toggle Lighting</button>
     <p></p>
     <label style="text-align:center"">Number of bacterias:<label id="num-bacterias">0</label></label>
     <p></p>
