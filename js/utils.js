@@ -20,7 +20,7 @@ function getRandomArbitrary(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-mat4_inverse = function(matrix) {
+function mat4_inverse(matrix) {
     var a = flatten(matrix);
     var b = a;
     var c=a[0], d=a[1], e=a[2], g=a[3], f=a[4], h=a[5], i=a[6], j=a[7], k=a[8],
@@ -74,4 +74,9 @@ function logMatrix(m) {
 	}
     }
     console.log(s);
+}
+
+function vectorsAngle(u, v) {
+    var a = Math.acos(dot(normalize(u), normalize(v)));
+    return a * RADIAN_TO_DEGREE;
 }

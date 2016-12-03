@@ -199,7 +199,7 @@ function configure() {
     camera.goHome([0.0, 0.0, 1.5]);
 
     interactor = new CameraInteractor(camera, canvas);
-    sphereInteractor = new SphereInteractor(camera, canvas);
+    // sphereInteractor = new SphereInteractor(camera, canvas);
 
     transform = new SceneTransforms(camera);
     transform.init();
@@ -282,9 +282,9 @@ function render() {
     if (isAnimating) {
 	if (animCount >= animFrames) {
 	    isAnimating = false;
-	    console.log(caps[lockedCapIndex].getTransformData());
-	    console.log('elevation', camera.elevation);
-	    console.log('azimuth', camera.azimuth);
+	    // console.log(caps[lockedCapIndex].getTransformData());
+	    // console.log('elevation', camera.elevation);
+	    // console.log('azimuth', camera.azimuth);
 	} else {
 	    camera.changeElevation(d_elevation);
 	    camera.changeAzimuth(d_azimuth);
@@ -441,7 +441,7 @@ function updateGame() {
 	if (caps.length < maxNumCaps) {
 	    var a = genNewCapData();
 	    addCap(new Cap(a));
-	    console.log('num bacterias:', caps.length);
+	    // console.log('num bacterias:', caps.length);
 	    document.getElementById("num-bacterias").innerHTML = caps.length;
 	}
 	nextTick = gameTicks + maxInterval;
@@ -486,18 +486,18 @@ function genNewCapData() {
 
 function onKeyDown(event) {
     if (event.keyCode == 13) {	// enter
-	console.log('enter');
+	// console.log('enter');
 	caps.sort(compareCapsByTx);
 	lockACap(0);
     }
     if (event.keyCode == 38) {	// up arrow
-	console.log('up');
+	// console.log('up');
     } else if (event.keyCode == 40) { // down arrow
-	console.log('down');
+	// console.log('down');
     } else if (event.keyCode == 37) { // left arrow
-	console.log('left');
+	// console.log('left');
     } else if (event.keyCode == 39) { // right arrow
-	console.log('right');
+	// console.log('right');
     }
 }
 
@@ -512,7 +512,7 @@ function lockACap(ci) {
     } else {
 	animFrames = STD_ANIM_FRAMES / 2;
     }
-    console.log('animFrames', animFrames);
+    // console.log('animFrames', animFrames);
     d_elevation = (a.tx - camera.elevation) / animFrames;
     d_azimuth = (a.ty - camera.azimuth) / animFrames;
     camera.changeElevation(d_elevation);
@@ -546,17 +546,11 @@ function nextCap(dir) {
 }
 
 function isInLockingArea(cap) {
-    var t = cap.getTransformData();
-    var elevation = camera.elevation;
-    if (elevation < 0) {
-	elevation += 360;
-    }
-    var azimuth = camera.azimuth;
-    if (azimuth < 0) {
-	azimuth += 360;
-    }
-    return Math.abs(t.tx - elevation) < 10 &&
-	Math.abs(t.ty - azimuth) < 10;
+    var capMatrix = cap.calcTransformMatrix(transform.mvMatrix);
+    var capNormal = vec3(mat4_multiplyVec4(capMatrix, vec4(cap.normals[0])));
+    var origNormal = vec3(0, 0, capRadius);
+    var angle = vectorsAngle(capNormal, origNormal);
+    return angle < 3;
 }
 
 function SphereInteractor(camera, canvas) {

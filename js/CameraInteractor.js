@@ -87,15 +87,15 @@ CameraInteractor.prototype.onKeyUp = function(ev) {
 CameraInteractor.prototype.update = function() {
     var self = this;
     var canvas = this.canvas;
-    // canvas.onmousedown = function(ev) {
-    // 	self.onMouseDown(ev);
-    // };
-    // canvas.onmouseup = function(ev) {
-    // 	self.onMouseUp(ev);
-    // };
-    // canvas.onmousemove = function(ev) {
-    // 	self.onMouseMove(ev);
-    // };
+    canvas.onmousedown = function(ev) {
+	self.onMouseDown(ev);
+    };
+    canvas.onmouseup = function(ev) {
+	self.onMouseUp(ev);
+    };
+    canvas.onmousemove = function(ev) {
+	self.onMouseMove(ev);
+    };
     window.onkeydown = function(ev) {
 	self.onKeyDown(ev);
     };
