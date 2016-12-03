@@ -40,6 +40,8 @@ const CAMERA_TRACKING_TYPE = 2;
 
 var capRadius = 1.02;
 var maxNumCaps = 5;
+var maxNumExplosions = 5;
+var maxNumParticlePoints = 100;
 
 var intervalId = 0;
 var updateGameDelay = 80;
@@ -58,6 +60,7 @@ var lockedCapIndex = -1;
 
 var sphere = null;
 var caps = [];
+var explosions = [];
 
 // Game Object Class
 function GameObj() {
@@ -268,6 +271,9 @@ function initLights() {
 function initObjData() {
     gameTicks = 0;
     sphere = new Sphere();
+    for (var i = 0; i < maxNumExplosions; i++) {
+	explosions.push(new Explosion());
+    }
 }
 
 window.onload = function init() {
@@ -473,20 +479,8 @@ function Cap(transformData) {
 function updateGame() {
     gameTicks++;
     sphere.update();
-    for (var i = 0; i < caps.length; i++) {
-	caps[i].update();
-	if (isInLockingArea(caps[i])) {
-	    document.getElementById('is-locked').innerHTML = i + ' is LOCKED';
-	    lockedCapIndex = i;
-	} else {
-	    if (lockedCapIndex == i) {
-		document.getElementById('is-locked').innerHTML = '';
-	    }
-	}
-    }
-    if (lockedCapIndex == -1) {
-	document.getElementById('is-locked').innerHTML = '';
-    }
+    updateEachBacteria();
+    updateEachExplosion();
 
     if (gameTicks == nextTick) {
 	if (caps.length < maxNumCaps) {
@@ -503,6 +497,10 @@ function clearAllCaps() {
     caps = [];
 }
 
+function isAllCapsClear() {
+    return caps.length == 0;
+}
+
 function resetGame() {
     isWin = false;
     isLost = false;
@@ -516,9 +514,40 @@ function endGame() {
 }
 
 function gameWinUpdate() {
+    updateEachBacteria();
+    updateEachExplosion();
+    if (isExplosionAnimDone()) {
+	endGame();
+    }
 }
 
 function gameLostUpdate() {
+}
+
+function updateEachBacteria() {
+    for (var i = 0; i < caps.length; i++) {
+	caps[i].update();
+	if (isInLockingArea(caps[i])) {
+	    document.getElementById('is-locked').innerHTML = i + ' is LOCKED';
+	    lockedCapIndex = i;
+	} else {
+	    if (lockedCapIndex == i) {
+		document.getElementById('is-locked').innerHTML = '';
+	    }
+	}
+    }
+    if (lockedCapIndex == -1) {
+	document.getElementById('is-locked').innerHTML = '';
+    }
+}
+
+function updateEachExplosion() {
+    for (var i = 0; i < explosions.length; i++) {
+	if (!explosions[i].isActive) {
+	    continue;
+	}
+	explosions[i].update();
+    }
 }
 
 function onMouseDown(event) {
@@ -666,3 +695,102 @@ SphereInteractor.prototype.rotate = function(dx, dy) {
     console.log('n_ry', n_ry);
     sphere.rotate(n_rx, n_ry);
 };
+
+function Explosion() {
+    GameObj.call(this);
+    this.theta = 0;
+    this.drawMode = gl.POINTS;
+    this.velocities = [];
+    this.pointSize = 4;
+    this.isActive = false;
+
+    this._genPoints = function(r) {
+	if (this.vertices.length != maxNumParticlePoints) {
+	    this.vertices = new Array(maxNumParticlePoints);
+	}
+	var tu = 0.0;
+	var tv = 0.0 - DEGREE_TO_RADIAN;
+	var tw = 0.0 + DEGREE_TO_RADIAN;
+	var u = [r * Math.cos(tu), r * Math.sin(tu)];
+	var v = [(r+0.01) * Math.cos(tv), (r+0.01) * Math.sin(tv)];
+	var w = [(r+0.01) * Math.cos(tw), (r+0.01) * Math.sin(tw)];
+	for (var i = 0; i < maxNumParticlePoints; i++) {
+	    var s1 = Math.random();
+	    var uv = mix(u, v, s1);
+	    var s2 = Math.random();
+	    var uvw = mix(uv, w, s2); // point in triangle (u, v, w) region
+	    this.vertices[i] = uvw;
+	}
+    };
+
+    this._genVelocities = function() {
+	if (this.velocities.length != maxNumParticlePoints) {
+	    this.velocities = new Array(maxNumParticlePoints);
+	}
+	for (var i = 0; i < maxNumParticlePoints; i++) {
+	    var vx = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0001, 0.0007);
+	    var vy = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0003, 0.0003);
+	    this.velocities[i] = vec2(vx, vy);
+	}
+    };
+
+    this.setPosition = function(r, thetaRadian) {
+	this.theta = thetaRadian * RADIAN_TO_DEGREE;
+	this._genPoints(r);	// generate this.vertices[]
+	this.vCount = this.vertices.length;
+	this._genVelocities();	// generate this.velocities[]
+    };
+
+    this.redraw = function(gl_vIndex) {
+	gl.uniform1f(pointSizeLoc, this.pointSize);
+	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
+	gl.drawArrays(this.drawMode, gl_vIndex + this.beginVIndex, this.vCount);
+    };
+
+    this.update = function() {
+	if (!this.isActive) {
+	    return;
+	}
+	if (gameTicks % 10 == 0) {
+	    this.pointSize--;
+	    if (this.pointSize == 0) {
+		this.inactivate();
+	    }
+	}
+	for (var i = 0; i < this.vertices.length; i++) {
+	    this.vertices[i][0] += this.velocities[i][0];
+	    this.vertices[i][1] += this.velocities[i][1];
+	    this.velocities[i][0] -= 0.0002;
+	    this.velocities[i][1] -= 0.0004;
+	}
+    };
+
+    this.activate = function() {
+	this.isActive = true;
+	this.pointSize = 4;
+    };
+
+    this.inactivate = function() {
+	this.isActive = false;
+    };
+
+    this.setPosition(capRadius, 0.0);
+}
+
+function getIdleExplosionIndex() {
+    for (var i = 0; i < explosions.length; i++) {
+	if (!explosions.isActive) {
+	    return i;
+	}
+    }
+    return -1;
+}
+
+function isExplosionAnimDone() {
+    for (var i = 0; i < explosions.length; i++) {
+	if (explosions[i].isActive) {
+	    return false;
+	}
+    }
+    return true;
+}
