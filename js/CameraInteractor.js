@@ -54,7 +54,7 @@ CameraInteractor.prototype.onMouseMove = function(ev) {
     }
 };
 
-CameraInteractor.prototype.onKeyDown = function(ev){
+CameraInteractor.prototype.onKeyDown = function(ev) {
     var c = this.camera;
     this.key = ev.keyCode;
     this.ctrl = ev.ctrlKey;
@@ -78,13 +78,13 @@ CameraInteractor.prototype.onKeyDown = function(ev){
     }
 };
 
-CameraInteractor.prototype.onKeyUp = function(ev){
+CameraInteractor.prototype.onKeyUp = function(ev) {
     if (ev.keyCode == 17) {	// ctrl
 	this.ctrl = false;
     }
 };
 
-CameraInteractor.prototype.update = function(){
+CameraInteractor.prototype.update = function() {
     var self = this;
     var canvas = this.canvas;
     canvas.onmousedown = function(ev) {
