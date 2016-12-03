@@ -96,8 +96,9 @@ function Sphere() {
     this.shininess = sphereShininess;
     this.S = mat4();
     this.T = mat4();
-    this.theta = 0;
-    this.R = rotate(this.theta, [0, 1, 0]);
+    this.rx = 0;		// degrees rotates about x axis
+    this.ry = 0; 		// degrees rotates about y axis
+    this.R = mat4();
 
     this.triangle = function(a, b, c) {
 	n1=vec4(a);
@@ -160,10 +161,32 @@ function Sphere() {
 	return a;
     };
     this.update = function() {
+	// var s = 1.0;
+	// if (gameTicks % 5 == 1) {
+	//     s = 0.9;
+	// } else if (gameTicks % 5 == 2) {
+	//     s = 0.95;
+	// } else if (gameTicks % 5 == 3) {
+	//     s = 1.0;
+	// } else if (gameTicks % 5 == 4) {
+	//     s = 0.95;
+	// } else if (gameTicks % 5 == 0) {
+	//     s = 0.9;
+	// }
+	// this.S = scale3d(s, s, s);
+	// logMatrix(rotate(30, [1, 1, 0]));
+	// logMatrix(rotate(30, [1, 1, 1]));
+	// logMatrix(mult(rotate(30, [0, 1, 0]), rotate(30, [1, 0, 0])));
     };
+
     // rx and ry are degrees the sphere rotates about x axis and y axis respectively
-    this.rotate = function(rx, ry) {
-	console.log(this);
+    this.rotate = function(dx, dy) {
+	this.ry = this.ry + dx;
+	this.rx = this.rx + dy;
+	// logMatrix(rotate(this.rx, [1, 0, 0]));
+	// logMatrix(rotate(this.ry, [0, 1, 0]));
+	this.R = mult(rotate(-this.ry, [0, 1, 0]), rotate(-this.rx, [1, 0, 0]));
+	logMatrix(this.R);
     }
 }
 
@@ -561,7 +584,6 @@ SphereInteractor.prototype.onMouseDown = function(ev) {
 };
 
 SphereInteractor.prototype.onMouseMove = function(ev) {
-    console.log('SI onMouseMove');
     this.lastX = this.x;
     this.lastY = this.y;
     this.x = ev.clientX;
@@ -595,5 +617,7 @@ SphereInteractor.prototype.rotate = function(dx, dy) {
     var d_rx = -20.0 / canvas.width;
     var n_ry = dy * d_ry * this.MOTION_FACTOR;
     var n_rx = dx * d_rx * this.MOTION_FACTOR;
+    console.log('n_rx', n_rx);
+    console.log('n_ry', n_ry);
     sphere.rotate(n_rx, n_ry);
 };
