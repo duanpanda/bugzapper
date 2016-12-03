@@ -80,15 +80,7 @@ function GameObj() {
 	gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
 	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
     };
-    this.calcTransformMatrix = function(m) {
-	return m;
-    };
-    this.setLights = function() {
-    };
-    this.update = function() {
-    };
 }
-
 
 function addCap(obj) {
     caps.push(obj);
@@ -537,3 +529,56 @@ function isInLockingArea(cap) {
     return Math.abs(t.tx - elevation) < 10 &&
 	Math.abs(t.ty - azimuth) < 10;
 }
+
+function SphereInteractor(camera, canvas) {
+    this.camera = camera;
+    this.canvas = canvas;
+    this.update();
+    this.dragging = false;
+    this.x = 0;
+    this.y = 0;
+    this.lastX = 0;
+    this.lastY = 0;
+    this.button = 0;
+    this.MOTION_FACTOR = 10.0;
+}
+
+SphereInteractor.prototype.onMouseUp = function(ev) {
+    this.draggin = false;
+};
+
+SphereInteractor.prototype.onMouseDown = function(ev) {
+    this.draggin = true;
+    this.x = ev.clientX;
+    this.y = ev.clientY;
+    this.button = ev.button;
+};
+
+SphereInteractor.prototype.onMouseMove = function(ev) {
+    this.lastX = this.x;
+    this.lastY = this.y;
+    this.x = ev.clientX;
+    this.y = ev.clientY;
+    if (!this.draggin) return;
+    var dx = this.x - this.lastX;
+    var dy = this.y - this.lastY;
+    if (this.button == 0) {	// left mouse button
+	this.rotate(dx, dy);
+    }
+};
+
+SphereInteractor.prototype.update = function() {
+    canvas.addEventListener('mousedown', this.onMouseDown);
+    canvas.addEventListener('mouseup', this.onMouseUp);
+    canvas.addEventListener('mousemove', this.onMouseMove);
+};
+
+SphereInteractor.prototype.rotate = function(dx, dy) {
+    var camera = this.camera;
+    var canvas = this.canvas;
+    var d_ry = -20.0 / canvas.height;
+    var d_rx = -20.0 / canvas.width;
+    var n_ry = dy * d_ry * this.MOTION_FACTOR;
+    var n_rx = dx * d_rx * this.MOTION_FACTOR;
+    sphere.rotate(n_rx, n_ry);
+};
