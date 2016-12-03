@@ -4,7 +4,7 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 0;
+var numTimesToSubdivide = 3;
 var updateLightPosition = false;
 
 var near = 0.2;
@@ -32,12 +32,13 @@ var capShininess = 200.0;
 var transform;
 var camera;
 var interactor;
+var sphereInteractor;
 
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
 var capRadius = 1.02;
-var maxNumCaps = 1;
+var maxNumCaps = 5;
 
 var intervalId = 0;
 var updateGameDelay = 80;
@@ -160,6 +161,10 @@ function Sphere() {
     };
     this.update = function() {
     };
+    // rx and ry are degrees the sphere rotates about x axis and y axis respectively
+    this.rotate = function(rx, ry) {
+	console.log(this);
+    }
 }
 
 function configure() {
@@ -171,6 +176,7 @@ function configure() {
     camera.goHome([0.0, 0.0, 1.5]);
 
     interactor = new CameraInteractor(camera, canvas);
+    sphereInteractor = new SphereInteractor(camera, canvas);
 
     transform = new SceneTransforms(camera);
     transform.init();
@@ -451,8 +457,8 @@ function onMouseDown(event) {
 }
 
 function genNewCapData() {
-    // return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
-    return {'tx': 154, 'ty': 83};
+    return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
+    // return {'tx': 154, 'ty': 83};
 }
 
 function onKeyDown(event) {
@@ -544,22 +550,23 @@ function SphereInteractor(camera, canvas) {
 }
 
 SphereInteractor.prototype.onMouseUp = function(ev) {
-    this.draggin = false;
+    this.dragging = false;
 };
 
 SphereInteractor.prototype.onMouseDown = function(ev) {
-    this.draggin = true;
+    this.dragging = true;
     this.x = ev.clientX;
     this.y = ev.clientY;
     this.button = ev.button;
 };
 
 SphereInteractor.prototype.onMouseMove = function(ev) {
+    console.log('SI onMouseMove');
     this.lastX = this.x;
     this.lastY = this.y;
     this.x = ev.clientX;
     this.y = ev.clientY;
-    if (!this.draggin) return;
+    if (!this.dragging) return;
     var dx = this.x - this.lastX;
     var dy = this.y - this.lastY;
     if (this.button == 0) {	// left mouse button
@@ -568,9 +575,17 @@ SphereInteractor.prototype.onMouseMove = function(ev) {
 };
 
 SphereInteractor.prototype.update = function() {
-    canvas.addEventListener('mousedown', this.onMouseDown);
-    canvas.addEventListener('mouseup', this.onMouseUp);
-    canvas.addEventListener('mousemove', this.onMouseMove);
+    var self = this;
+    var canvas = this.canvas;
+    canvas.addEventListener('mousedown', function(ev) {
+	self.onMouseDown(ev);
+    });
+    canvas.addEventListener('mouseup', function(ev) {
+	self.onMouseUp(ev);
+    });
+    canvas.addEventListener('mousemove', function(ev) {
+	self.onMouseMove(ev);
+    });
 };
 
 SphereInteractor.prototype.rotate = function(dx, dy) {
