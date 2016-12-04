@@ -189,33 +189,16 @@ function Sphere() {
 	return a;
     };
     this.update = function() {
-	// var s = 1.0;
-	// if (gameTicks % 5 == 1) {
-	//     s = 0.9;
-	// } else if (gameTicks % 5 == 2) {
-	//     s = 0.95;
-	// } else if (gameTicks % 5 == 3) {
-	//     s = 1.0;
-	// } else if (gameTicks % 5 == 4) {
-	//     s = 0.95;
-	// } else if (gameTicks % 5 == 0) {
-	//     s = 0.9;
-	// }
-	// this.S = scale3d(s, s, s);
-	// logMatrix(rotate(30, [1, 1, 0]));
-	// logMatrix(rotate(30, [1, 1, 1]));
-	// logMatrix(mult(rotate(30, [0, 1, 0]), rotate(30, [1, 0, 0])));
     };
 
-    // rx and ry are degrees the sphere rotates about x axis and y axis respectively
+    // rx and ry are degrees the sphere rotates about x and y axis respectively
     this.rotate = function(dx, dy) {
-	this.ry = this.ry + dx;
-	this.rx = this.rx + dy;
-	// logMatrix(rotate(this.rx, [1, 0, 0]));
-	// logMatrix(rotate(this.ry, [0, 1, 0]));
-	this.R = mult(rotate(-this.ry, [0, 1, 0]), rotate(-this.rx, [1, 0, 0]));
+	var rotate_y = rotate(dx, [0, 1, 0]);
+	var rotate_x = rotate(dy, [1, 0, 0]);
+	var newRotate = mult(rotate_y, rotate_x); // order doesn't matter
+	this.R = mult(newRotate, this.R); // order is very important
 	logMatrix(this.R);
-    }
+    };
 }
 
 function configure() {
@@ -226,8 +209,8 @@ function configure() {
     camera = new Camera(CAMERA_ORBIT_TYPE);
     camera.goHome([0.0, 0.0, 1.5]);
 
-    interactor = new CameraInteractor(camera, canvas);
-    // sphereInteractor = new SphereInteractor(camera, canvas);
+    // interactor = new CameraInteractor(camera, canvas);
+    sphereInteractor = new SphereInteractor(camera, canvas);
 
     transform = new SceneTransforms(camera);
     transform.init();
@@ -321,9 +304,6 @@ function render() {
     if (isAnimating) {
 	if (animCount >= animFrames) {
 	    isAnimating = false;
-	    // console.log(caps[lockedCapIndex].getTransformData());
-	    // console.log('elevation', camera.elevation);
-	    // console.log('azimuth', camera.azimuth);
 	} else {
 	    camera.changeElevation(d_elevation);
 	    camera.changeAzimuth(d_azimuth);
@@ -345,6 +325,7 @@ function render() {
 	if (obj.isActive) {
 	    transform.calculateModelView();
 	    transform.push();
+	    obj.updateRotation();
 	    newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
 	    // console.log(vec3(mat4_multiplyVec4(newMVMatrix, vec4(obj.normals[0])))); // the locked one should be close to [0, 0, 1.02]
 	    transform.setMVMatrix(newMVMatrix);
@@ -376,7 +357,7 @@ function toggleLighting() {
     console.log('disableLighting =', disableLighting);
 }
 
-function Cap(transformData) {
+function Cap(transformData, sphere) {
     GameObj.call(this);
     this.ambient = capAmbient;
     this.diffuse = capDiffuse;
@@ -467,12 +448,15 @@ function Cap(transformData) {
 	    this.scaleFactor += 0.005;
 	}
 	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
-	var RX = rotate(transformData.tx, [1, 0, 0]);
-	var RY = rotate(transformData.ty, [0, 1, 0]);
-	this.R = mult(RY, RX);
     };
     this.getTransformData = function() {
 	return transformData;
+    };
+    this.updateRotation = function() {
+	var RX = rotate(transformData.tx, [1, 0, 0]);
+	var RY = rotate(transformData.ty, [0, 1, 0]);
+	var newRotate = mult(RY, RX);
+	this.R = mult(sphere.R, newRotate);
     };
 };
 
@@ -485,8 +469,7 @@ function updateGame() {
     if (gameTicks == nextTick) {
 	if (caps.length < maxNumCaps) {
 	    var a = genNewCapData();
-	    addCap(new Cap(a));
-	    // console.log('num bacterias:', caps.length);
+	    addCap(new Cap(a, sphere));
 	    document.getElementById("num-bacterias").innerHTML = caps.length;
 	}
 	nextTick = gameTicks + maxInterval;
@@ -687,13 +670,7 @@ SphereInteractor.prototype.update = function() {
 SphereInteractor.prototype.rotate = function(dx, dy) {
     var camera = this.camera;
     var canvas = this.canvas;
-    var d_ry = -20.0 / canvas.height;
-    var d_rx = -20.0 / canvas.width;
-    var n_ry = dy * d_ry * this.MOTION_FACTOR;
-    var n_rx = dx * d_rx * this.MOTION_FACTOR;
-    console.log('n_rx', n_rx);
-    console.log('n_ry', n_ry);
-    sphere.rotate(n_rx, n_ry);
+    sphere.rotate(dx / 10, dy / 10); // degrees
 };
 
 function Explosion() {
