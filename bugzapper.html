@@ -19,21 +19,21 @@
      varying vec4 vFinalColor;
 
      void main(void) {
-     if (uPerVertexColor) {
-       vFinalColor = aVertexColor;
-     } else {
-       vec3 pos = (uMVMatrix * aVertexPosition).xyz;
-       vec3 light;
-       if (uUpdateLight) {
-	 light = (uMVMatrix * uLightPosition).xyz;
-       } else {
-	 light = uLightPosition.xyz;
-       }
-       vLightVec = pos - light;
-       vEyeVec = -pos;
-       vNormal = (uNMatrix * aVertexNormal).xyz;
-     }
-       gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
+	 if (uPerVertexColor) {
+	     vFinalColor = aVertexColor;
+	 } else {
+	     vec3 pos = (uMVMatrix * aVertexPosition).xyz;
+	     vec3 light;
+	     if (uUpdateLight) {
+		 light = (uMVMatrix * uLightPosition).xyz;
+	     } else {
+		 light = uLightPosition.xyz;
+	     }
+	     vLightVec = pos - light;
+	     vEyeVec = -pos;
+	     vNormal = (uNMatrix * aVertexNormal).xyz;
+	 }
+	 gl_Position = uPMatrix * uMVMatrix * aVertexPosition;
      }
     </script>
 
@@ -54,29 +54,29 @@
      varying vec4 vFinalColor;
 
      void main(void) {
-     if (uPerVertexColor) {
-       gl_FragColor = vFinalColor;
-     } else {
-       vec4 fColor;
+	 if (uPerVertexColor) {
+	     gl_FragColor = vFinalColor;
+	 } else {
+	     vec4 fColor;
 
-       vec3 L = normalize(vLightVec);
-       vec3 N = normalize(vNormal);
-       vec3 E = normalize(vEyeVec);
-       vec3 R = reflect(L, N);
+	     vec3 L = normalize(vLightVec);
+	     vec3 N = normalize(vNormal);
+	     vec3 E = normalize(vEyeVec);
+	     vec3 R = reflect(L, N);
 
-       vec4 ambient = uLightAmbient * uMaterialAmbient;
+	     vec4 ambient = uLightAmbient * uMaterialAmbient;
 
-       float Kd = max(dot(N, -L), 0.0);
-       vec4  diffuse = Kd * uLightDiffuse * uMaterialDiffuse;
+	     float Kd = max(dot(N, -L), 0.0);
+	     vec4  diffuse = Kd * uLightDiffuse * uMaterialDiffuse;
 
-       float Ks = pow(max(dot(R, E), 0.0), uShininess);
-       vec4  specular = Ks * uLightSpecular * uMaterialSpecular;
+	     float Ks = pow(max(dot(R, E), 0.0), uShininess);
+	     vec4  specular = Ks * uLightSpecular * uMaterialSpecular;
 
-       fColor = ambient + diffuse + specular;
-       fColor.a = 1.0;
+	     fColor = ambient + diffuse + specular;
+	     fColor.a = 1.0;
 
-       gl_FragColor = fColor;
-     }
+	     gl_FragColor = fColor;
+	 }
      }
     </script>
 
