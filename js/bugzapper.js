@@ -32,9 +32,6 @@ var capColorPallete = [
     vec4(0.0, 1.0, 0.0, 1.0),
     vec4(1.0, 0.0, 144/255, 1.0),
     vec4(1.0, 112/255, 112/255, 0.0, 1.0)];
-var capAmbient = vec4(1.0, 1.0, 1.0, 1.0);
-var capDiffuse = vec4(1.0, 0.0, 0.0, 1.0);
-var capSpecular = vec4(1.0, 0.0, 0.0, 1.0);
 var capShininess = 200.0;
 
 var transform;
@@ -395,8 +392,8 @@ function toggleWorldOrCamera() {
 
 function Cap(transformData, sphere) {
     GameObj.call(this);
-    this.ambient = capAmbient;
-    this.diffuse = capColorPallete[getRandomInt(0, capColorPallete.length)];
+    this.ambient = capColorPallete[getRandomInt(0, capColorPallete.length)];
+    this.diffuse = this.ambient;
     this.specular = this.diffuse;
     this.shininess = capShininess;
     this.scaleFactor = getRandomArbitrary(0.1, 0.2);
