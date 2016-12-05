@@ -4,9 +4,10 @@ var prg;
 const RADIAN_TO_DEGREE = 180 / Math.PI;
 const DEGREE_TO_RADIAN = Math.PI / 180;
 
-var numTimesToSubdivide = 3;
+var numTimesToSubdivide = 5;
 var updateLightPosition = false;
 var disableLighting = false;
+var isWorld = true;		// world or camera space
 
 var near = 0.2;
 var far = 5000;
@@ -38,13 +39,13 @@ var capShininess = 200.0;
 
 var transform;
 var camera;
-var interactor;
+var cameraInteractor;
 var sphereInteractor;
 
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
-var capRadius = 1.02;
+var capRadius = 1.01;
 var maxNumCaps = 5;
 var maxNumExplosions = 10;
 var maxNumParticlePoints = 100;
@@ -215,8 +216,11 @@ function configure() {
     camera = new Camera(CAMERA_ORBIT_TYPE);
     camera.goHome([0.0, 0.0, 1.5]);
 
-    // interactor = new CameraInteractor(camera, canvas);
-    sphereInteractor = new SphereInteractor(camera, canvas);
+    if (isWorld) {
+	// sphereInteractor = new SphereInteractor(camera, canvas);
+    } else {
+	cameraInteractor = new CameraInteractor(camera, canvas);
+    }
 
     transform = new SceneTransforms(camera);
     transform.init();
@@ -290,6 +294,7 @@ window.onload = function init() {
     };
     document.getElementById("Button8").onclick = toggleLightPos;
     document.getElementById("Button1").onclick = toggleLighting;
+    document.getElementById("Button2").onclick = toggleWorldOrCamera;
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
@@ -371,6 +376,12 @@ function toggleLightPos() {
 function toggleLighting() {
     disableLighting = !disableLighting;
     console.log('disableLighting =', disableLighting);
+}
+
+function toggleWorldOrCamera() {
+    isWorld = !isWorld;
+    configure();
+    document.getElementById('camera-or-world').innerHTML = isWorld ? 'World' : 'Camera';
 }
 
 function Cap(transformData, sphere) {
@@ -579,7 +590,7 @@ function genNewCapData() {
 }
 
 function onKeyDown(event) {
-    if (event.keyCode == 13) {	// enter
+    if (event.keyCode == 13 && !isWorld) {	// enter
 	// console.log('enter');
 	caps.sort(compareCapsByTx);
 	lockACap(0);
