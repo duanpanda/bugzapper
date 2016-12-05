@@ -96,7 +96,9 @@
     <canvas id="gl-canvas" width="512" height="512">
       Oops ... your browser doesn't support the HTML5 canvas element
     </canvas>
-    <p>Press Enter key to lock a bacteria, and then click left mouse button to eradicate it.</p>
+    <p>Dragging mouse to rotate the sphere and lock a bacteria, and then click left mouse button to eradicate it.</p>
+    <button id="reset">Restart Game</button>
+    <p></p>
     <button id="Button6">Increase Subdivisions</button>
     <button id="Button7">Decrease Subdivisions</button>
     <p></p>
@@ -108,13 +110,15 @@
     <button id="Button2">Toggle Camera or World</button>
     <label id="camera-or-world">World</label>
     <p></p>
-    <label>Number of living bacterias: </label><label id="num-bacterias">0</label>
+    <label>Number of living bacterias: </label><label id="num-bacterias" class="game-text">0</label>
     <p></p>
     <label id="is-locked" class="game-text"></label>
     <p></p>
-    <label>Computer Points: </label><label id="computer-points">0</label>
+    <label>Computer Points: </label><label id="computer-points" class="game-text">0</label>
     <p></p>
-    <label>Player Points: </label><label id="player-points">0</label>
+    <label>Player Points: </label><label id="player-points" class="game-text">0</label>
+    <p></p>
+    <label id="win-or-lose" class="game-text"></label>
     <p></p>
     <table id="tbl-matrix">
       <tr><td id='m0' style='font-weight:bold'></td><td id='m4' style='font-weight:bold'></td><td id='m8' style='font-weight:bold'></td><td id='m12'></td></tr>

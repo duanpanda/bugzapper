@@ -55,7 +55,7 @@ var updateGameDelay = 80;
 var isWin = false;
 var isLost = false;
 var gameTicks = 1;
-var maxInterval = 30;
+var maxInterval = 50;
 var nextTick = maxInterval;
 var d_elevation = 0;
 var d_azimuth = 0;
@@ -268,9 +268,13 @@ function initLights() {
 function initObjData() {
     gameTicks = 0;
     sphere = new Sphere();
+    explosions = [];
     for (var i = 0; i < maxNumExplosions; i++) {
 	explosions.push(new Explosion());
     }
+    caps = [];
+    addCap(new Cap(genNewCapData(), sphere));
+    document.getElementById("num-bacterias").innerHTML = caps.length;
 }
 
 window.onload = function init() {
@@ -298,6 +302,7 @@ window.onload = function init() {
     document.getElementById("Button8").onclick = toggleLightPos;
     document.getElementById("Button1").onclick = toggleLighting;
     document.getElementById("Button2").onclick = toggleWorldOrCamera;
+    document.getElementById("reset").onclick = resetGame;
 
     intervalId = window.setInterval(updateGame, updateGameDelay);
 
@@ -497,9 +502,33 @@ function Cap(transformData, sphere) {
 
 function updateGame() {
     gameTicks++;
-    sphere.update();
-    updateEachBacteria();
-    updateEachExplosion();
+    if (isWin) {
+	gameWinUpdate();
+	return;
+    }
+
+    if (isLost) {
+	gameLostUpdate();
+	return;
+    }
+
+    if (isAllCapsClear()) {
+	nextTick = 0;
+	isWin = true;
+	console.log('you win');
+	return;
+    }
+
+    if (computerPoints >= computerWinningPoints) {
+	nextTick = 0;
+	isLost = true;
+	console.log('you lose');
+	return;
+    }
+
+    // if not win and not lost, then do the normal update
+
+    // generate new bacteria
     if (gameTicks == nextTick) {
 	if (caps.length < maxNumCaps) {
 	    addCap(new Cap(genNewCapData(), sphere));
@@ -507,6 +536,10 @@ function updateGame() {
 	}
 	nextTick = gameTicks + maxInterval;
     }
+
+    sphere.update();
+    updateEachBacteria();
+    updateEachExplosion();
 }
 
 function clearAllCaps() {
@@ -520,13 +553,29 @@ function isAllCapsClear() {
 function resetGame() {
     isWin = false;
     isLost = false;
-    gameTicks = 1;
+    clearAllCaps();
+    initObjData();
     nextTick = maxInterval;
     window.clearInterval(intervalId);
     intervalId = window.setInterval(updateGame, updateGameDelay);
+    // reset all the text
+    computerPoints = 0;
+    document.getElementById('computer-points').innerHTML = computerPoints;
+    playerPoints = 0;
+    document.getElementById('player-points').innerHTML = playerPoints;
+    document.getElementById('is-locked').innerHTML = '';
+    document.getElementById('win-or-lose').innerHTML = '';
+    canvas.addEventListener('mousedown', onMouseDown);
 }
 
 function endGame() {
+    if (isWin) {
+	document.getElementById("win-or-lose").innerHTML = "YOU WIN";
+    } else if (isLost) {
+	document.getElementById("win-or-lose").innerHTML = "YOU LOSE";
+    }
+    window.clearInterval(intervalId);
+    canvas.removeEventListener("mousedown", onMouseDown);
 }
 
 function gameWinUpdate() {
@@ -538,6 +587,7 @@ function gameWinUpdate() {
 }
 
 function gameLostUpdate() {
+    gameWinUpdate();
 }
 
 function updateEachBacteria() {

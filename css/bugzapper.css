@@ -80,7 +80,6 @@ a:link, a:visited {
 }
 
 .game-text {
-    float: left;
     width: 550px;
     margin: 5px;
     text-align: center;
