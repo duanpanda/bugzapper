@@ -197,7 +197,7 @@ function Sphere() {
 	var rotate_x = rotate(dy, [1, 0, 0]);
 	var newRotate = mult(rotate_y, rotate_x); // order doesn't matter
 	this.R = mult(newRotate, this.R); // order is very important
-	logMatrix(this.R);
+	// logMatrix(this.R);
     };
 }
 
@@ -242,6 +242,7 @@ function initProgram() {
     prg.uLightPosition = gl.getUniformLocation(prg, "uLightPosition");
     prg.uUpdateLight = gl.getUniformLocation(prg, "uUpdateLight");
     prg.uPerVertexColor = gl.getUniformLocation(prg, "uPerVertexColor");
+    prg.uPointSize = gl.getUniformLocation(prg, "uPointSize");
 }
 
 function initLights() {
@@ -321,18 +322,27 @@ function render() {
     sphere.redraw();
 
     for (var i = 0; i < caps.length; i++) {
-	var obj = caps[i];
-	if (obj.isActive) {
-	    transform.calculateModelView();
+	var cap = caps[i];
+	transform.push();
+	cap.updateRotation();
+	newMVMatrix = cap.calcTransformMatrix(transform.mvMatrix);
+	transform.setMVMatrix(newMVMatrix);
+	transform.setMatrixUniforms();
+	transform.pop();
+	cap.setLights();
+	cap.redraw();
+    }
+
+    gl.uniform1i(prg.uPerVertexColor, true); // for explosions only
+   for (i = 0; i < explosions.length; i++) {
+	var explosion = explosions[i];
+	if (explosion.isActive) {
 	    transform.push();
-	    obj.updateRotation();
-	    newMVMatrix = obj.calcTransformMatrix(transform.mvMatrix);
-	    // console.log(vec3(mat4_multiplyVec4(newMVMatrix, vec4(obj.normals[0])))); // the locked one should be close to [0, 0, 1.02]
+	    newMVMatrix = explosion.calcTransformMatrix(transform.mvMatrix);
 	    transform.setMVMatrix(newMVMatrix);
 	    transform.setMatrixUniforms();
 	    transform.pop();
-	    obj.setLights();
-	    obj.redraw();
+	    explosion.redraw();
 	}
     }
 
@@ -370,6 +380,8 @@ function Cap(transformData, sphere) {
     this.R = mult(rotate(transformData.tx, [1, 0, 0]),
 		  rotate(transformData.ty, [0, 1, 0]));
     this.drawMode = gl.TRIANGLE_FAN;
+    // theta: angle with x axis in x-y plane
+    // phi: angle with z axis in 3D space
     this.point = function(theta, phi) {
 	var t = theta * DEGREE_TO_RADIAN;
 	var p = phi * DEGREE_TO_RADIAN;
@@ -391,11 +403,11 @@ function Cap(transformData, sphere) {
 	this.vCount = 0;
 	this.vertices = [];
 	var p;
-	var data = [[0,0]];
+	var data = [[0, 0]];	// format: [theta, phi]
 	for (var i = 0; i < 36; i++) {
-	    data.push([i*10,10]);
+	    data.push([i * 10, 10]);
 	}
-	data.push([0,10]);
+	data.push([0, 10]);
 	var theta, phi;
 	for (i = 0; i < data.length; i++) {
 	    theta = data[i][0];
@@ -410,8 +422,6 @@ function Cap(transformData, sphere) {
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
-	gl.bindBuffer(gl.ARRAY_BUFFER, this.cbo);
-	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.colors), gl.STATIC_DRAW);
 
 	this.setColor(capDiffuse);
     };
@@ -465,11 +475,9 @@ function updateGame() {
     sphere.update();
     updateEachBacteria();
     updateEachExplosion();
-
     if (gameTicks == nextTick) {
 	if (caps.length < maxNumCaps) {
-	    var a = genNewCapData();
-	    addCap(new Cap(a, sphere));
+	    addCap(new Cap(genNewCapData(), sphere));
 	    document.getElementById("num-bacterias").innerHTML = caps.length;
 	}
 	nextTick = gameTicks + maxInterval;
@@ -536,6 +544,11 @@ function updateEachExplosion() {
 function onMouseDown(event) {
     if (lockedCapIndex >= 0 && !isAnimating) {
 	console.log('hit', lockedCapIndex);
+
+	var explosion = explosions[getIdleExplosionIndex()];
+	explosion.activate();
+	explosion.init(caps[lockedCapIndex]);
+
 	caps.splice(lockedCapIndex, 1);
 	lockedCapIndex = -1;
 	document.getElementById('num-bacterias').innerHTML = caps.length;
@@ -565,7 +578,7 @@ function onKeyDown(event) {
 }
 
 function lockACap(ci) {
-    if (caps.length == 0) return;
+    if (caps.length == 0 || isAnimating) return;
     isAnimating = true;
     var a = caps[ci].getTransformData();
     var e = a.tx - camera.elevation;
@@ -668,67 +681,58 @@ SphereInteractor.prototype.update = function() {
 };
 
 SphereInteractor.prototype.rotate = function(dx, dy) {
-    var camera = this.camera;
-    var canvas = this.canvas;
     sphere.rotate(dx / 10, dy / 10); // degrees
 };
 
 function Explosion() {
     GameObj.call(this);
-    this.theta = 0;
+    this.tx = 0;
+    this.ty = 0;
     this.drawMode = gl.POINTS;
     this.velocities = [];
     this.pointSize = 4;
     this.isActive = false;
-
-    this._genPoints = function(r) {
-	if (this.vertices.length != maxNumParticlePoints) {
-	    this.vertices = new Array(maxNumParticlePoints);
-	}
-	var tu = 0.0;
-	var tv = 0.0 - DEGREE_TO_RADIAN;
-	var tw = 0.0 + DEGREE_TO_RADIAN;
-	var u = [r * Math.cos(tu), r * Math.sin(tu)];
-	var v = [(r+0.01) * Math.cos(tv), (r+0.01) * Math.sin(tv)];
-	var w = [(r+0.01) * Math.cos(tw), (r+0.01) * Math.sin(tw)];
-	for (var i = 0; i < maxNumParticlePoints; i++) {
-	    var s1 = Math.random();
-	    var uv = mix(u, v, s1);
-	    var s2 = Math.random();
-	    var uvw = mix(uv, w, s2); // point in triangle (u, v, w) region
-	    this.vertices[i] = uvw;
-	}
-    };
-
-    this._genVelocities = function() {
-	if (this.velocities.length != maxNumParticlePoints) {
-	    this.velocities = new Array(maxNumParticlePoints);
-	}
-	for (var i = 0; i < maxNumParticlePoints; i++) {
-	    var vx = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0001, 0.0007);
-	    var vy = getRandomInt(i, maxNumParticlePoints) * getRandomArbitrary(-0.0003, 0.0003);
-	    this.velocities[i] = vec2(vx, vy);
-	}
-    };
-
-    this.setPosition = function(r, thetaRadian) {
-	this.theta = thetaRadian * RADIAN_TO_DEGREE;
-	this._genPoints(r);	// generate this.vertices[]
+    this._genPoints = function(cap) {
+	this.vertices = cap.vertices;
 	this.vCount = this.vertices.length;
-	this._genVelocities();	// generate this.velocities[]
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
     };
-
-    this.redraw = function(gl_vIndex) {
-	gl.uniform1f(pointSizeLoc, this.pointSize);
-	gl.uniform1f(thetaLoc, this.theta * DEGREE_TO_RADIAN);
-	gl.drawArrays(this.drawMode, gl_vIndex + this.beginVIndex, this.vCount);
-    };
-
-    this.update = function() {
-	if (!this.isActive) {
-	    return;
+    this._genVelocities = function() {
+	if (this.velocities.length != this.vertices.length) {
+	    this.velocities = new Array(this.vertices.length);
 	}
-	if (gameTicks % 10 == 0) {
+	for (var i = 0; i < this.velocities.length; i++) {
+	    var vx = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0001, 0.0007);
+	    var vy = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0003, 0.0003);
+	    var vz = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0003, 0.0003);
+	    this.velocities[i] = vec3(vx, vy, vz);
+	}
+    };
+    this.init = function(cap) {
+	this.tx = cap.tx;
+	this.ty = cap.ty;
+	this.scaleFactor = cap.scaleFactor;
+	this.color = cap.diffuse;
+	this.S = cap.S;
+	this.R = cap.R;
+	this._genPoints(cap);
+	this._genVelocities();
+	this.setColor(this.color);
+    };
+    this.redraw = function() {
+	gl.uniform1f(prg.uPointSize, this.pointSize);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.vertexAttribPointer(prg.aVertexPosition, 4, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.cbo);
+	gl.enableVertexAttribArray(prg.aVertexColor);
+	gl.disableVertexAttribArray(prg.aVertexNormal);
+	gl.vertexAttribPointer(prg.aVertexColor, 4, gl.FLOAT, false, 0, 0);
+	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
+    };
+    // pre: isActive == true
+    this.update = function() {
+	if (gameTicks % 20 == 0) {
 	    this.pointSize--;
 	    if (this.pointSize == 0) {
 		this.inactivate();
@@ -737,21 +741,22 @@ function Explosion() {
 	for (var i = 0; i < this.vertices.length; i++) {
 	    this.vertices[i][0] += this.velocities[i][0];
 	    this.vertices[i][1] += this.velocities[i][1];
+	    this.vertices[i][2] += this.velocities[i][2];
 	    this.velocities[i][0] -= 0.0002;
 	    this.velocities[i][1] -= 0.0004;
+	    this.velocities[i][2] -= 0.0004;
 	}
     };
-
     this.activate = function() {
 	this.isActive = true;
 	this.pointSize = 4;
     };
-
     this.inactivate = function() {
 	this.isActive = false;
     };
-
-    this.setPosition(capRadius, 0.0);
+    this.calcTransformMatrix = function(m) {
+	return mult(mult(mult(mat4(), m), this.R), this.S);
+    };
 }
 
 function getIdleExplosionIndex() {
