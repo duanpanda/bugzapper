@@ -40,7 +40,7 @@ const CAMERA_TRACKING_TYPE = 2;
 
 var capRadius = 1.02;
 var maxNumCaps = 5;
-var maxNumExplosions = 5;
+var maxNumExplosions = 10;
 var maxNumParticlePoints = 100;
 
 var intervalId = 0;
@@ -546,9 +546,12 @@ function onMouseDown(event) {
     if (lockedCapIndex >= 0 && !isAnimating) {
 	console.log('hit', lockedCapIndex);
 
-	var explosion = explosions[getIdleExplosionIndex()];
-	explosion.activate();
-	explosion.init(caps[lockedCapIndex]);
+	var ei = getIdleExplosionIndex();
+	if (ei != -1) {
+	    var explosion = explosions[ei];
+	    explosion.activate();
+	    explosion.init(caps[lockedCapIndex]);
+	}
 
 	caps.splice(lockedCapIndex, 1);
 	lockedCapIndex = -1;
@@ -704,9 +707,9 @@ function Explosion() {
 	    this.velocities = new Array(this.vertices.length);
 	}
 	for (var i = 0; i < this.velocities.length; i++) {
-	    var vx = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.004, 0.007);
-	    var vy = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.003, 0.003);
-	    var vz = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.003, 0.003);
+	    var vx = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.001, 0.001);
+	    var vy = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.001, 0.001);
+	    var vz = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0003, 0.0003);
 	    this.velocities[i] = vec3(vx, vy, vz);
 	}
     };
@@ -733,7 +736,7 @@ function Explosion() {
     };
     // pre: isActive == true
     this.update = function() {
-	if (gameTicks % 20 == 0) {
+	if (gameTicks % 5 == 0) {
 	    this.pointSize--;
 	    if (this.pointSize == 0) {
 		this.inactivate();
@@ -743,9 +746,9 @@ function Explosion() {
 	    this.vertices[i][0] += this.velocities[i][0];
 	    this.vertices[i][1] += this.velocities[i][1];
 	    this.vertices[i][2] += this.velocities[i][2];
-	    this.velocities[i][0] -= 0.0002;
-	    this.velocities[i][1] -= 0.0004;
-	    this.velocities[i][2] -= 0.0004;
+	    this.velocities[i][0] -= 0.0008;
+	    this.velocities[i][1] -= 0.0008;
+	    this.velocities[i][2] -= 0.0001;
 	}
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
@@ -764,7 +767,7 @@ function Explosion() {
 
 function getIdleExplosionIndex() {
     for (var i = 0; i < explosions.length; i++) {
-	if (!explosions.isActive) {
+	if (!explosions[i].isActive) {
 	    return i;
 	}
     }
