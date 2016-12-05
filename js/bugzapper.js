@@ -549,19 +549,27 @@ function updateEachExplosion() {
 }
 
 function onMouseDown(event) {
+    var rect = canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+    var glx = 2 * x / canvas.width - 1;
+    var gly = 2 * (canvas.height - y) / canvas.height - 1;
+    var r = Math.sqrt(Math.pow(glx, 2) + Math.pow(gly, 2));
     if (lockedCapIndex >= 0 && !isAnimating) {
-	console.log('hit', lockedCapIndex);
+	if (r < 0.3) {
+	    console.log('hit', lockedCapIndex);
 
-	var ei = getIdleExplosionIndex();
-	if (ei != -1) {
-	    var explosion = explosions[ei];
-	    explosion.activate();
-	    explosion.init(caps[lockedCapIndex]);
+	    var ei = getIdleExplosionIndex();
+	    if (ei != -1) {
+		var explosion = explosions[ei];
+		explosion.activate();
+		explosion.init(caps[lockedCapIndex]);
+	    }
+
+	    caps.splice(lockedCapIndex, 1);
+	    lockedCapIndex = -1;
+	    document.getElementById('num-bacterias').innerHTML = caps.length;
 	}
-
-	caps.splice(lockedCapIndex, 1);
-	lockedCapIndex = -1;
-	document.getElementById('num-bacterias').innerHTML = caps.length;
     }
 }
 
