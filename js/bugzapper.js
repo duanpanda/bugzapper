@@ -17,15 +17,21 @@ var vb = vec4(0.0, 0.942809, 0.333333, 1.0);
 var vc = vec4(-0.816497, -0.471405, 0.333333, 1.0);
 var vd = vec4(0.816497, -0.471405, 0.333333, 1.0);
 
-var lightPosition = vec4(0, 0.8, 0.8, 0.0);
+var lightPosition = vec4(2.0, 2.0, 1.6, 0.0);
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
-var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
-var sphereAmbient = vec4(1.0, 0.0, 1.0, 1.0);
+var lightSpecular = vec4(1.0, 0.9, 0.3, 1.0);
+var sphereAmbient = vec4(0.1, 0.1, 0.1, 1.0);
 var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereShininess = 100.0;
-var capAmbient = vec4(1.0, 0.0, 0.0, 1.0);
+var capColorPallete = [
+    vec4(1.0, 0.0, 0.0, 1.0),
+    vec4(116/255, 23/255, 1.0, 1.0),
+    vec4(0.0, 1.0, 0.0, 1.0),
+    vec4(1.0, 0.0, 144/255, 1.0),
+    vec4(1.0, 112/255, 112/255, 0.0, 1.0)];
+var capAmbient = vec4(1.0, 1.0, 1.0, 1.0);
 var capDiffuse = vec4(1.0, 0.0, 0.0, 1.0);
 var capSpecular = vec4(1.0, 0.0, 0.0, 1.0);
 var capShininess = 200.0;
@@ -370,8 +376,8 @@ function toggleLighting() {
 function Cap(transformData, sphere) {
     GameObj.call(this);
     this.ambient = capAmbient;
-    this.diffuse = capDiffuse;
-    this.specular = capSpecular;
+    this.diffuse = capColorPallete[getRandomInt(0, capColorPallete.length)];
+    this.specular = this.diffuse;
     this.shininess = capShininess;
     this.scaleFactor = getRandomArbitrary(0.1, 0.2);
     this.tx = transformData.tx;
@@ -423,7 +429,7 @@ function Cap(transformData, sphere) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.nbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.normals), gl.STATIC_DRAW);
 
-	this.setColor(capDiffuse);
+	this.setColor(this.diffuse);
     };
     this.genPoints();
     this.setLights = function() {
