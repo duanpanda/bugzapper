@@ -21,7 +21,7 @@ var vd = vec4(0.816497, -0.471405, 0.333333, 1.0);
 var lightPosition = vec4(2.0, 2.0, 1.6, 0.0);
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
-var lightSpecular = vec4(1.0, 0.9, 0.3, 1.0);
+var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 var sphereAmbient = vec4(0.1, 0.1, 0.1, 1.0);
 var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
@@ -213,7 +213,7 @@ function Sphere() {
 
 function configure() {
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.1, 0.1, 0.1, 1.0);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
 
     camera = new Camera(CAMERA_ORBIT_TYPE);
@@ -558,6 +558,7 @@ function resetGame() {
     nextTick = maxInterval;
     window.clearInterval(intervalId);
     intervalId = window.setInterval(updateGame, updateGameDelay);
+    lockedCapIndex = -1;
     // reset all the text
     computerPoints = 0;
     document.getElementById('computer-points').innerHTML = computerPoints;
