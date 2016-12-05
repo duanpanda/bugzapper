@@ -370,7 +370,7 @@ function render() {
 
 function updateTransforms() {
     transform.calculateModelView();
-    // displayMatrix(transform.mvMatrix);
+    displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
     transform.calculatePerspective(p);
@@ -567,6 +567,8 @@ function resetGame() {
     document.getElementById('is-locked').innerHTML = '';
     document.getElementById('win-or-lose').innerHTML = '';
     canvas.addEventListener('mousedown', onMouseDown);
+
+    configure();
 }
 
 function endGame() {
