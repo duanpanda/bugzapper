@@ -69,6 +69,10 @@ var sphere = null;
 var caps = [];
 var explosions = [];
 
+var computerPoints = 0;
+var computerWinningPoints = maxNumCaps;
+var playerPoints = 0;
+
 // Game Object Class
 function GameObj() {
     this.vertices = [];
@@ -204,7 +208,6 @@ function Sphere() {
 	var rotate_x = rotate(dy, [1, 0, 0]);
 	var newRotate = mult(rotate_y, rotate_x); // order doesn't matter
 	this.R = mult(newRotate, this.R); // order is very important
-	// logMatrix(this.R);
     };
 }
 
@@ -217,7 +220,7 @@ function configure() {
     camera.goHome([0.0, 0.0, 1.5]);
 
     if (isWorld) {
-	// sphereInteractor = new SphereInteractor(camera, canvas);
+	sphereInteractor = new SphereInteractor(camera, canvas);
     } else {
 	cameraInteractor = new CameraInteractor(camera, canvas);
     }
@@ -362,7 +365,7 @@ function render() {
 
 function updateTransforms() {
     transform.calculateModelView();
-    displayMatrix(transform.mvMatrix);
+    // displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
     transform.calculatePerspective(p);
@@ -376,6 +379,7 @@ function toggleLightPos() {
 function toggleLighting() {
     disableLighting = !disableLighting;
     console.log('disableLighting =', disableLighting);
+    document.getElementById('toggle-lighting').innerHTML = disableLighting ? 'Lighting Disabled' : 'Lighting Enagled';
 }
 
 function toggleWorldOrCamera() {
@@ -473,6 +477,10 @@ function Cap(transformData, sphere) {
     this.update = function() {
 	if (this.scaleFactor < 1.0) {
 	    this.scaleFactor += 0.005;
+	    if (this.scaleFactor >= 1.0) {
+		computerPoints += 1;
+		document.getElementById('computer-points').innerHTML = computerPoints;
+	    }
 	}
 	this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
     };
@@ -536,7 +544,7 @@ function updateEachBacteria() {
     for (var i = 0; i < caps.length; i++) {
 	caps[i].update();
 	if (isInLockingArea(caps[i])) {
-	    document.getElementById('is-locked').innerHTML = i + ' is LOCKED';
+	    document.getElementById('is-locked').innerHTML = 'a bacteria is LOCKED (shootable)';
 	    lockedCapIndex = i;
 	} else {
 	    if (lockedCapIndex == i) {
@@ -580,6 +588,8 @@ function onMouseDown(event) {
 	    caps.splice(lockedCapIndex, 1);
 	    lockedCapIndex = -1;
 	    document.getElementById('num-bacterias').innerHTML = caps.length;
+	    playerPoints += 1;
+	    document.getElementById('player-points').innerHTML = playerPoints;
 	}
     }
 }
