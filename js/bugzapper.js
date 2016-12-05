@@ -524,6 +524,7 @@ function updateEachBacteria() {
 	} else {
 	    if (lockedCapIndex == i) {
 		document.getElementById('is-locked').innerHTML = '';
+		lockedCapIndex = -1;
 	    }
 	}
     }
@@ -703,9 +704,9 @@ function Explosion() {
 	    this.velocities = new Array(this.vertices.length);
 	}
 	for (var i = 0; i < this.velocities.length; i++) {
-	    var vx = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0001, 0.0007);
-	    var vy = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0003, 0.0003);
-	    var vz = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0003, 0.0003);
+	    var vx = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.004, 0.007);
+	    var vy = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.003, 0.003);
+	    var vz = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.003, 0.003);
 	    this.velocities[i] = vec3(vx, vy, vz);
 	}
     };
@@ -746,6 +747,8 @@ function Explosion() {
 	    this.velocities[i][1] -= 0.0004;
 	    this.velocities[i][2] -= 0.0004;
 	}
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
     };
     this.activate = function() {
 	this.isActive = true;
