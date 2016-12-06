@@ -45,7 +45,7 @@ const CAMERA_TRACKING_TYPE = 2;
 var capRadius = 1.01;
 var maxNumCaps = 5;
 var maxNumExplosions = 10;
-var maxNumParticlePoints = 100;
+var maxNumParticlePoints = 1000;
 
 var intervalId = 0;
 var updateGameDelay = 80;
@@ -629,6 +629,7 @@ function onMouseDown(event) {
 	    console.log('hit', lockedCapIndex);
 
 	    var ei = getIdleExplosionIndex();
+	    console.log('ei', ei);
 	    if (ei != -1) {
 		var explosion = explosions[ei];
 		explosion.activate();
@@ -782,8 +783,14 @@ function Explosion() {
     this.pointSize = 4;
     this.isActive = false;
     this._genPoints = function(cap) {
-	this.vertices = cap.vertices;
-	this.vCount = this.vertices.length;
+	var a = cap.vertices[0];
+	this.vertices = [];
+	for (var i = 0; i < maxNumParticlePoints; i++) {
+	    this.vertices.push(vec4(a[0], a[1], a[2], a[3]));
+	}
+	this.vCount = i;
+	// this.vertices = cap.vertices;
+	// this.vCount = this.vertices.length;
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
     };
@@ -792,18 +799,18 @@ function Explosion() {
 	    this.velocities = new Array(this.vertices.length);
 	}
 	for (var i = 0; i < this.velocities.length; i++) {
-	    var vx = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.001, 0.001);
-	    var vy = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.001, 0.001);
-	    var vz = getRandomInt(i, this.velocities.length) * getRandomArbitrary(-0.0003, 0.0003);
+	    var vx = getRandomInt(i / 10, (i+1) / 10) * getRandomArbitrary(-0.0005, 0.0005);
+	    var vy = getRandomInt(i / 10, (i+1) / 10) * getRandomArbitrary(-0.0005, 0.0005);
+	    var vz = getRandomInt(i / 10, (i+1) / 10) * getRandomArbitrary(0.0001, 0.0005);
 	    this.velocities[i] = vec3(vx, vy, vz);
 	}
     };
     this.init = function(cap) {
 	this.tx = cap.tx;
 	this.ty = cap.ty;
-	this.scaleFactor = cap.scaleFactor;
+	// this.scaleFactor = cap.scaleFactor;
 	this.color = cap.diffuse;
-	this.S = cap.S;
+	// this.S = scale3d(0.5, 0.5, 1.0);
 	this.R = cap.R;
 	this._genPoints(cap);
 	this._genVelocities();
@@ -821,7 +828,7 @@ function Explosion() {
     };
     // pre: isActive == true
     this.update = function() {
-	if (gameTicks % 5 == 0) {
+	if (gameTicks % 2 == 0) {
 	    this.pointSize--;
 	    if (this.pointSize == 0) {
 		this.inactivate();
@@ -831,9 +838,21 @@ function Explosion() {
 	    this.vertices[i][0] += this.velocities[i][0];
 	    this.vertices[i][1] += this.velocities[i][1];
 	    this.vertices[i][2] += this.velocities[i][2];
-	    this.velocities[i][0] -= 0.0008;
-	    this.velocities[i][1] -= 0.0008;
-	    this.velocities[i][2] -= 0.0001;
+	    if (this.velocities[i][0] > 0) {
+		this.velocities[i][0] -= 0.001;
+	    } else if (this.velocities[i][0] < 0) {
+		this.velocities[i][0] += 0.001;
+	    }
+	    if (this.velocities[i][1] > 0) {
+		this.velocities[i][1] -= 0.001;
+	    } else if (this.velocities[i][1] < 0) {
+		this.velocities[i][1] += 0.001;
+	    }
+	    if (this.velocities[i][2] > 0) {
+		this.velocities[i][2] -= 0.001;
+	    } else if (this.velocities[i][1] < 0) {
+		this.velocities[i][2] += 0.001;
+	    }
 	}
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
@@ -846,7 +865,8 @@ function Explosion() {
 	this.isActive = false;
     };
     this.calcTransformMatrix = function(m) {
-	return mult(mult(mult(mat4(), m), this.R), this.S);
+	// return mult(mult(mult(mat4(), m), this.R), this.S);
+	return mult(mult(mat4(), m), this.R);
     };
 }
 
