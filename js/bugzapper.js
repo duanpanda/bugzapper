@@ -42,7 +42,7 @@ var sphereInteractor;
 const CAMERA_ORBIT_TYPE = 1;
 const CAMERA_TRACKING_TYPE = 2;
 
-var capRadius = 1.01;
+var capRadius = 1.008;
 var maxNumCaps = 5;
 var maxNumExplosions = 10;
 var maxNumParticlePoints = 1000;
@@ -396,13 +396,12 @@ function Cap(transformData, sphere) {
     this.diffuse = this.ambient;
     this.specular = this.diffuse;
     this.shininess = capShininess;
-    this.scaleFactor = getRandomArbitrary(0.1, 0.2);
+    this.scaleFactor = 0.1;
     this.tx = transformData.tx;
     this.ty = transformData.ty;
     this.S = scale3d(this.scaleFactor, this.scaleFactor, 1.0);
     this.R = mult(rotate(transformData.tx, [1, 0, 0]),
 		  rotate(transformData.ty, [0, 1, 0]));
-    this.drawMode = gl.TRIANGLE_FAN;
     // theta: angle with x axis in x-y plane
     // phi: angle with z axis in 3D space
     this.point = function(theta, phi) {
@@ -426,11 +425,26 @@ function Cap(transformData, sphere) {
 	this.vCount = 0;
 	this.vertices = [];
 	var p;
+
+	// start TRIANGLE_FAN
 	var data = [[0, 0]];	// format: [theta, phi]
-	for (var i = 0; i < 36; i++) {
-	    data.push([i * 10, 10]);
+	for (var i = 0; i <= 36; i++) {
+	    data.push([i * 10, 1]);
 	}
-	data.push([0, 10]);
+	// end TRIANGLE_FAN, 1 center, 37 points in the circle
+	// start TRIANGLE_STRIP
+	for (i = 0; i < 36; i++) {
+	    for (var j = 1; j < 10; j++) {
+		data.push([i*10, j]);
+		data.push([i*10, j+1]);
+		data.push([(i+1)*10, j]);
+
+		data.push([i*10, j+1]);
+		data.push([(i+1)*10, j]);
+		data.push([(i+1)*10, j+1]);
+	    }
+	}
+	// end TRIANGLE_STRIP
 	var theta, phi;
 	for (i = 0; i < data.length; i++) {
 	    theta = data[i][0];
@@ -474,7 +488,8 @@ function Cap(transformData, sphere) {
 	    gl.disableVertexAttribArray(prg.aVertexColor);
 	    gl.vertexAttribPointer(prg.aVertexNormal, 4, gl.FLOAT, false, 0, 0);
 	}
-	gl.drawArrays(this.drawMode, this.beginVIndex, this.vCount);
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, 38);
+	gl.drawArrays(gl.TRIANGLE_STRIP, 38, this.vCount - 38);
     };
     this.update = function() {
 	if (this.scaleFactor < 1.0) {
@@ -789,8 +804,6 @@ function Explosion() {
 	    this.vertices.push(vec4(a[0], a[1], a[2], a[3]));
 	}
 	this.vCount = i;
-	// this.vertices = cap.vertices;
-	// this.vCount = this.vertices.length;
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 	gl.bufferData(gl.ARRAY_BUFFER, flatten(this.vertices), gl.STATIC_DRAW);
     };
