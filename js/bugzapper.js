@@ -367,7 +367,7 @@ function render() {
 
 function updateTransforms() {
     transform.calculateModelView();
-    displayMatrix(transform.mvMatrix);
+    // displayMatrix(transform.mvMatrix);
     var p = {'fovy': fovy, 'aspect': canvas.width / canvas.height,
 	     'near': near, 'far': far};
     transform.calculatePerspective(p);
