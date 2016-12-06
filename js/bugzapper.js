@@ -18,7 +18,7 @@ var vb = vec4(0.0, 0.942809, 0.333333, 1.0);
 var vc = vec4(-0.816497, -0.471405, 0.333333, 1.0);
 var vd = vec4(0.816497, -0.471405, 0.333333, 1.0);
 
-var lightPosition = vec4(2.0, 2.0, 1.6, 0.0);
+var lightPosition = vec4(1.0, 1.5, 1.2, 0.0);
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
 var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
@@ -27,11 +27,11 @@ var sphereDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereSpecular = vec4(1.0, 0.8, 0.0, 1.0);
 var sphereShininess = 100.0;
 var capColorPallete = [
-    vec4(1.0, 0.0, 0.0, 1.0),
+    vec4(0.9, 0.1, 0.1, 1.0),
     vec4(116/255, 23/255, 1.0, 1.0),
-    vec4(0.0, 1.0, 0.0, 1.0),
+    vec4(0.1, 0.9, 0.1, 1.0),
     vec4(1.0, 0.0, 144/255, 1.0),
-    vec4(1.0, 112/255, 112/255, 0.0, 1.0)];
+    vec4(1.0, 112/255, 112/255, 1.0)];
 var capShininess = 200.0;
 
 var transform;
