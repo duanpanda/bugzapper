@@ -568,9 +568,8 @@ function resetGame() {
     clearAllCaps();
     initObjData();
     nextTick = maxInterval;
-    window.clearInterval(intervalId);
-    intervalId = window.setInterval(updateGame, updateGameDelay);
     lockedCapIndex = -1;
+
     // reset all the text
     computerPoints = 0;
     document.getElementById('computer-points').innerHTML = computerPoints;
@@ -578,7 +577,14 @@ function resetGame() {
     document.getElementById('player-points').innerHTML = playerPoints;
     document.getElementById('is-locked').innerHTML = '';
     document.getElementById('win-or-lose').innerHTML = '';
+
+    window.clearInterval(intervalId);
+    intervalId = window.setInterval(updateGame, updateGameDelay);
+
+    canvas.removeEventListener('mousedown', onMouseDown);
+    window.removeEventListener('keydown', onKeyDown);
     canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('keydown', onKeyDown);
 
     configure();
 }
@@ -591,6 +597,7 @@ function endGame() {
     }
     window.clearInterval(intervalId);
     canvas.removeEventListener("mousedown", onMouseDown);
+    window.removeEventListener('keydown', onKeyDown);
 }
 
 function gameWinUpdate() {
@@ -662,23 +669,12 @@ function onMouseDown(event) {
 
 function genNewCapData() {
     return {'tx': getRandomInt(0, 360), 'ty': getRandomInt(0, 360)};
-    // return {'tx': 154, 'ty': 83};
 }
 
 function onKeyDown(event) {
     if (event.keyCode == 13 && !isWorld) {	// enter
-	// console.log('enter');
 	caps.sort(compareCapsByTx);
 	lockACap(0);
-    }
-    if (event.keyCode == 38) {	// up arrow
-	// console.log('up');
-    } else if (event.keyCode == 40) { // down arrow
-	// console.log('down');
-    } else if (event.keyCode == 37) { // left arrow
-	// console.log('left');
-    } else if (event.keyCode == 39) { // right arrow
-	// console.log('right');
     }
 }
 
@@ -693,7 +689,6 @@ function lockACap(ci) {
     } else {
 	animFrames = STD_ANIM_FRAMES / 2;
     }
-    // console.log('animFrames', animFrames);
     d_elevation = (a.tx - camera.elevation) / animFrames;
     d_azimuth = (a.ty - camera.azimuth) / animFrames;
     camera.changeElevation(d_elevation);
@@ -705,25 +700,6 @@ function lockACap(ci) {
 // tx is the angle that a cap rotates about the x axis
 function compareCapsByTx(a, b) {
     return a.tx - b.tx;
-}
-
-function compareCapsByTy(a, b) {
-    return a.ty - b.ty;
-}
-
-function nextCap(dir) {
-    switch (dir) {
-    case "up":
-	caps.sort(compareCapsByTx);
-	break;
-    case "down":
-	caps.sort(compareCapsByTx);
-	break;
-    case "left":
-	break;
-    case "right":
-	break;
-    }
 }
 
 function isInLockingArea(cap) {
@@ -774,15 +750,15 @@ SphereInteractor.prototype.onMouseMove = function(ev) {
 SphereInteractor.prototype.update = function() {
     var self = this;
     var canvas = this.canvas;
-    canvas.addEventListener('mousedown', function(ev) {
+    canvas.onmousedown = function(ev) {
 	self.onMouseDown(ev);
-    });
-    canvas.addEventListener('mouseup', function(ev) {
+    };
+    canvas.onmouseup = function(ev) {
 	self.onMouseUp(ev);
-    });
-    canvas.addEventListener('mousemove', function(ev) {
+    };
+    canvas.onmousemove = function(ev) {
 	self.onMouseMove(ev);
-    });
+    };
 };
 
 SphereInteractor.prototype.rotate = function(dx, dy) {
