@@ -18,7 +18,7 @@ var vb = vec4(0.0, 0.942809, 0.333333, 1.0);
 var vc = vec4(-0.816497, -0.471405, 0.333333, 1.0);
 var vd = vec4(0.816497, -0.471405, 0.333333, 1.0);
 
-var lightPosition = vec4(1.0, 1.5, 1.2, 0.0);
+var lightPosition = vec4(1.0, 1.5, 1.2, 1.0);
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
 var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
@@ -381,7 +381,7 @@ function toggleLightPos() {
 function toggleLighting() {
     disableLighting = !disableLighting;
     console.log('disableLighting =', disableLighting);
-    document.getElementById('toggle-lighting').innerHTML = disableLighting ? 'Lighting Disabled' : 'Lighting Enagled';
+    document.getElementById('toggle-lighting').innerHTML = disableLighting ? 'Lighting Disabled' : 'Lighting Enabled';
 }
 
 function toggleWorldOrCamera() {
